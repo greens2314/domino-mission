@@ -3,12 +3,14 @@ import { PIECES } from '../game/catalog';
 import { emergencyFees, totalSpent, useStore } from '../store';
 import { fmtClock, fmtDuration } from './TopBar';
 import { generatePdf } from '../pdf';
+import { copyLayoutToClipboard } from '../layoutExport';
 
 export default function ResultScreen() {
   const game = useStore((s) => s.game)!;
   const resetAll = useStore((s) => s.resetAll);
   const [busy, setBusy] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [copied, setCopied] = useState(false);
   const success = game.acceptance === 'success';
   const ended = game.endedAt ?? new Date().toISOString();
   const used = new Date(ended).getTime() - new Date(game.startedAt).getTime();
@@ -31,6 +33,9 @@ export default function ResultScreen() {
           <div className="btn-col">
             <button className="btn btn-blue btn-xl" disabled={busy} onClick={async () => { setBusy(true); try { await generatePdf(game); } finally { setBusy(false); } }}>
               {busy ? '產生中…' : '下載驗收 PDF'}
+            </button>
+            <button className="btn btn-ghost" onClick={async () => { await copyLayoutToClipboard(game.board); setCopied(true); setTimeout(() => setCopied(false), 2500); }}>
+              {copied ? '已複製配置' : '複製配置'}
             </button>
             {!confirmReset ? (
               <button className="btn btn-ghost" onClick={() => setConfirmReset(true)}>重新開始</button>

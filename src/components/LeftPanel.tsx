@@ -3,6 +3,7 @@ import { EMERGENCY_FEE, FREE_ORDERS, PIECES, PIECE_ORDER } from '../game/catalog
 import { buildOrder, type CartItem } from '../game/shop';
 import type { PackageKind, PieceKind } from '../game/types';
 import { useStore } from '../store';
+import { copyLayoutToClipboard } from '../layoutExport';
 
 type Tab = 'brief' | 'shop' | 'inventory' | 'tools';
 
@@ -198,6 +199,8 @@ function Tools() {
         <li>右鍵拖曳：平移</li>
         <li>鏡頭操作不會改變施工資料。</li>
       </ul>
+      <h4>配置</h4>
+      <button className="btn btn-ghost" onClick={async () => { const ok = await copyLayoutToClipboard(useStore.getState().game!.board); useStore.getState().flash(ok ? '已複製目前配置到剪貼簿。' : '請從對話框手動複製。'); }}>複製目前配置</button>
       <h4>材料操作</h4>
       <ul>
         <li>點選庫存材料 → 在工地上點選位置放置；放在積木上即為堆疊。</li>

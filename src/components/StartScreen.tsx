@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { GAME_MINUTES, START_BUDGET } from '../game/catalog';
 import { useStore } from '../store';
+import { fetchDemoLayout } from '../layoutExport';
 
 export default function StartScreen() {
   const [name, setName] = useState('');
   const startGame = useStore((s) => s.startGame);
   const demo = typeof location !== 'undefined' && /[?&]demo/.test(location.search);
-  const start = () => { startGame(name); if (demo) useStore.getState().loadDemoLayout(); };
+  const start = async () => {
+    startGame(name);
+    if (demo) { const board = await fetchDemoLayout(); useStore.getState().loadDemoLayout(board ?? undefined); }
+  };
   const ok = name.trim().length > 0;
   return (
     <div className="start">

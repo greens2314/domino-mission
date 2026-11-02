@@ -53,7 +53,7 @@ export type Store = {
   expire: (snapshot?: string) => void;
   resetAll: () => void;
   /** Teacher-only demo: loads a complete passing layout (URL ?demo). */
-  loadDemoLayout: () => void;
+  loadDemoLayout: (board?: BoardPiece[]) => void;
 
   // ---- shop ----
   purchase: (cart: CartItem[]) => boolean;
@@ -178,10 +178,10 @@ export const useStore = create<Store>()(
 
       resetAll: () => set({ game: null, tool: 'select', material: null, rotation: 0, selectedId: null, movingId: null, hover: null, rulerPoints: [], playback: null, modal: null, message: null }),
 
-      loadDemoLayout: () => {
+      loadDemoLayout: (given) => {
         const g = get().game;
         if (!isRunning(g)) return;
-        const board = buildPassingBoard();
+        const board = given && given.length ? given : buildPassingBoard();
         const inv = { ...g.inventory };
         for (const p of board) inv[p.kind] = (inv[p.kind] ?? 0) + 0;
         set({ game: { ...g, board, inventory: inv, carUnlocked: true, log: [...g.log, { at: nowIso(), text: '（示範）已載入示範配置。' }] } });
