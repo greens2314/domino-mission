@@ -422,10 +422,6 @@ export const useStore = create<Store>()(
         if (!pb) return;
         set({ playback: null, modal: pb.mode === 'rehearsal' && get().game?.lastRehearsal ? { kind: 'rehearsal-result' } : get().modal });
       },
-          history: [],
-          selectedId: null, movingId: null, material: null, tool: 'select', modal: null,
-        });
-      },
     }),
     {
       name: 'domino-mission-v1',
