@@ -56,6 +56,9 @@ export type GameState = {
   acceptance: AcceptanceStatus;
   failureReason?: string;
   finalSnapshot?: string;
+  /** standing layout at the moment of acceptance, so students can restore it and keep fixing */
+  preAcceptanceBoard?: BoardPiece[];
+  acceptanceRuns?: number;
   log: LogEntry[];
 };
 

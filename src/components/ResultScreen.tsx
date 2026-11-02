@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PIECES } from '../game/catalog';
-import { emergencyFees, totalSpent, useStore } from '../store';
+import { emergencyFees, remainingMs, totalSpent, useStore } from '../store';
 import { fmtClock, fmtDuration } from './TopBar';
 import { generatePdf } from '../pdf';
 import { copyLayoutToClipboard } from '../layoutExport';
@@ -8,6 +8,8 @@ import { copyLayoutToClipboard } from '../layoutExport';
 export default function ResultScreen() {
   const game = useStore((s) => s.game)!;
   const resetAll = useStore((s) => s.resetAll);
+  const restoreAfterAcceptance = useStore((s) => s.restoreAfterAcceptance);
+  const nowMs = useStore((s) => s.nowMs);
   const [busy, setBusy] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -34,6 +36,12 @@ export default function ResultScreen() {
             <button className="btn btn-blue btn-xl" disabled={busy} onClick={async () => { setBusy(true); try { await generatePdf(game); } finally { setBusy(false); } }}>
               {busy ? '產生中…' : '下載驗收 PDF'}
             </button>
+            {game.preAcceptanceBoard && game.acceptance !== 'expired' && (
+              <button className="btn btn-yellow" disabled={remainingMs(game, nowMs) <= 0} onClick={restoreAfterAcceptance} title="回到施工畫面，骨牌全部站回驗收時的樣子">
+                恢復驗收時的配置，繼續修正
+                {remainingMs(game, nowMs) <= 0 && <small>時間已到期</small>}
+              </button>
+            )}
             <button className="btn btn-ghost" onClick={async () => { await copyLayoutToClipboard(game.board); setCopied(true); setTimeout(() => setCopied(false), 2500); }}>
               {copied ? '已複製配置' : '複製配置'}
             </button>
