@@ -30,10 +30,6 @@ export default function TopBar() {
         <span className="stat-label">開始時間</span>
         <span className="stat-value">{fmtClock(game.startedAt)}</span>
       </div>
-      <div className="stat">
-        <span className="stat-label">目前時間</span>
-        <span className="stat-value">{fmtClock(nowMs)}</span>
-      </div>
       <div className={`stat stat-wide ${urgent ? 'urgent' : ''}`}>
         <span className="stat-label">剩餘時間</span>
         <span className="stat-value stat-big">{fmtDuration(remain)}</span>

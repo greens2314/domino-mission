@@ -19,7 +19,7 @@ export function buildOrder(cart: CartItem[], orderNo: number, at: string): Purch
       const unitCost = c.package === 'single' ? PIECES[c.kind].single : PIECES[c.kind].tenPack;
       return { kind: c.kind, package: c.package, quantity: c.quantity, unitCost, subtotal: unitCost * c.quantity };
     });
-  const emergencyFee = emergencyFeeFor(orderNo);
+  const emergencyFee = lines.length ? emergencyFeeFor(orderNo) : 0;
   const total = lines.reduce((s, l) => s + l.subtotal, 0) + emergencyFee;
   return { orderNo, at, lines, emergencyFee, total };
 }

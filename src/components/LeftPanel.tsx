@@ -141,7 +141,7 @@ function Inventory() {
   return (
     <div className="inventory">
       <h3>現有庫存</h3>
-      <p className="muted">點選材料後，在工地上點選位置放置（或直接放在積木上方堆疊）。按 <kbd>R</kbd> 旋轉，<kbd>Esc</kbd> 取消。</p>
+      <p className="muted">點選材料後，在工地上點選位置放置（或直接放在積木上方堆疊）。按 <kbd>R</kbd> 旋轉，<kbd>Esc</kbd> 取消。骨牌沿倒下方向可以半格半格放，排得更密。</p>
       <div className="inv-grid">
         {PIECE_ORDER.map((k) => {
           const n = game.inventory[k];

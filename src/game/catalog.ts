@@ -17,7 +17,7 @@ export const CAR_HEIGHT = 2;  // in brick layers
 export const DOMINO_HEIGHT = 2;      // visual/physical height in layers
 export const BRICK_HEIGHT = 1;
 
-export const START_BUDGET = 1000;
+export const START_BUDGET = 2000;
 export const FREE_ORDERS = 3;
 export const EMERGENCY_FEE = 50;
 export const GAME_MINUTES = 60;

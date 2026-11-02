@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BoardBuilder, buildPassingBoard } from './fixtures';
-import { checkPlacement } from './board';
+import { checkPlacement, dominoBox, boxesOverlap } from './board';
 import { simulate } from './simulate';
 import {
   detectGates, brickComponents, runAcceptance, validateGates, validatePillars,
@@ -153,5 +153,38 @@ describe('acceptance', () => {
     const r = runAcceptance(board);
     expect(r.ok).toBe(false);
     expect(r.reason).toMatch(/階梯/);
+  });
+});
+
+describe('half-cell dominoes', () => {
+  it('allows 0.5 spacing along the fall direction but not across it', () => {
+    const b = new BoardBuilder();
+    b.add('domino', 5, 5, 0, 0);
+    expect(checkPlacement(b.pieces, 'domino', 5.5, 5, 0).ok).toBe(true);   // ahead by half a cell
+    expect(checkPlacement(b.pieces, 'domino', 5, 5.5, 0).ok).toBe(false);  // beside, tiles overlap
+    expect(checkPlacement(b.pieces, 'domino', 5, 6, 0).ok).toBe(true);     // beside on the next cell
+    expect(boxesOverlap(dominoBox(5, 5, 0), dominoBox(5.5, 5, 0))).toBe(false);
+  });
+  it('keeps bricks off cells touched by a half-positioned domino', () => {
+    const b = new BoardBuilder();
+    b.add('domino', 5.5, 5, 0, 0); // touches cells 5 and 6
+    expect(checkPlacement(b.pieces, 'brick-1x1', 6, 5, 0).ok).toBe(false);
+    expect(checkPlacement(b.pieces, 'brick-1x1', 7, 5, 0).ok).toBe(true);
+  });
+  it('requires a level surface under a straddling domino', () => {
+    const b = new BoardBuilder();
+    b.column(5, 5, 1);
+    expect(checkPlacement(b.pieces, 'domino', 5.5, 5, 0).ok).toBe(false);
+    b.column(6, 5, 1);
+    expect(checkPlacement(b.pieces, 'domino', 5.5, 5, 0)).toEqual({ ok: true, z: 1 });
+  });
+  it('propagates through a densely packed chain and a half-spaced diamond', () => {
+    const b = new BoardBuilder();
+    for (let i = 0; i < 8; i++) b.add('domino', 10 + i * 0.5, 13, 0, 0);
+    const rows = [2, 4, 6, 8, 10, 10, 8, 6, 4, 2];
+    rows.forEach((sz, i) => { for (let y = 14 - sz / 2; y < 14 + sz / 2; y++) b.add('domino', 14.5 + i * 0.5, y, 0, 0); });
+    const s = simulate(b.pieces);
+    expect(s.falls).toHaveLength(b.pieces.length);
+    expect(findDiamond(b.pieces)?.size).toBe(60);
   });
 });

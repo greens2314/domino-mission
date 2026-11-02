@@ -8,7 +8,7 @@ import RightPanel from './components/RightPanel';
 import ActivityLog from './components/ActivityLog';
 import Modals from './components/Modals';
 import ResultScreen from './components/ResultScreen';
-import CameraControls from './components/CameraControls';
+import StageToolbar from './components/CameraControls';
 import { isRunning, remainingMs, useStore } from './store';
 
 export default function App() {
@@ -36,11 +36,13 @@ export default function App() {
         {game && <TopBar />}
         {game && <LeftPanel />}
         <main className="stage">
-          <Scene />
-          {game && <CameraControls />}
-          {playback && (
-            <div className="stage-banner">{playback.mode === 'acceptance' ? '正式驗收進行中…' : '全程演練進行中…'}</div>
-          )}
+          <div className="stage-canvas">
+            <Scene />
+            {playback && (
+              <div className="stage-banner">{playback.mode === 'acceptance' ? '正式驗收進行中…' : '全程演練進行中…'}</div>
+            )}
+          </div>
+          {game && <StageToolbar />}
         </main>
         {game && <RightPanel />}
         {game && <ActivityLog />}

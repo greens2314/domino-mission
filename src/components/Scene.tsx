@@ -28,12 +28,22 @@ function SnapshotBridge() {
 
 /** Grid origin for a footprint so the hovered cell sits near its centre. */
 export function originFor(material: Material, rotation: Rotation, hx: number, hy: number) {
+  if (material === 'domino') {
+    // half-cell steps along the fall direction, whole cells across it
+    const { dx } = dominoDir(rotation);
+    const snapHalf = (v: number) => Math.round((v - 0.5) * 2) / 2;
+    return dx !== 0 ? { x: snapHalf(hx), y: Math.floor(hy) } : { x: Math.floor(hx), y: snapHalf(hy) };
+  }
   const { w, d } = footprint(material, rotation);
-  return { x: hx - Math.floor((w - 1) / 2), y: hy - Math.floor((d - 1) / 2) };
+  return { x: Math.floor(hx) - Math.floor((w - 1) / 2), y: Math.floor(hy) - Math.floor((d - 1) / 2) };
 }
 
+/** Pointer position on the board plane (fractional cells). */
 function cellFromPoint(p: THREE.Vector3) {
-  return { x: Math.floor(p.x), y: Math.floor(p.z) };
+  return { x: p.x, y: p.z };
+}
+function wholeCell(p: { x: number; y: number }) {
+  return { x: Math.floor(p.x), y: Math.floor(p.y) };
 }
 
 /** Text rendered to a canvas texture on a sprite (avoids DOM overlays inside the canvas). */
@@ -365,7 +375,8 @@ function World() {
   const onPlaneMove = (e: ThreeEvent<PointerEvent>) => {
     const c = cellFromPoint(e.point);
     setHover(c);
-    if (dragging.current && !dragging.current.moved && key2(c.x, c.y) !== dragging.current.startCell) {
+    const wc = wholeCell(c);
+    if (dragging.current && !dragging.current.moved && key2(wc.x, wc.y) !== dragging.current.startCell) {
       dragging.current.moved = true;
       beginMove(dragging.current.id);
     }
@@ -375,7 +386,7 @@ function World() {
     if (locked) return;
     if (e.delta > 4) return; // it was a camera drag
     const c = cellFromPoint(e.point);
-    if (tool === 'ruler') { addRulerPoint(c); return; }
+    if (tool === 'ruler') { addRulerPoint(wholeCell(c)); return; }
     if (movingId) { const o = originFor(useStore.getState().game!.board.find((b) => b.id === movingId)!.kind, useStore.getState().rotation, c.x, c.y); placeAt(o.x, o.y); return; }
     if (tool === 'place' && material) { const o = originFor(material, useStore.getState().rotation, c.x, c.y); placeAt(o.x, o.y); return; }
     selectPiece(null);
@@ -384,7 +395,7 @@ function World() {
   const onPieceDown = (e: ThreeEvent<PointerEvent>, id: string) => {
     if (locked || e.button !== 0) return;
     e.stopPropagation();
-    if (tool === 'ruler') { addRulerPoint(cellFromPoint(e.point)); return; }
+    if (tool === 'ruler') { addRulerPoint(wholeCell(cellFromPoint(e.point))); return; }
     if (tool === 'place' && material) {
       // placing on top of an existing piece: treat like a plane click at that cell
       const c = cellFromPoint(e.point);
@@ -400,7 +411,7 @@ function World() {
       return;
     }
     selectPiece(id);
-    const c = cellFromPoint(e.point);
+    const c = wholeCell(cellFromPoint(e.point));
     dragging.current = { id, startCell: key2(c.x, c.y), moved: false };
     if (controls.current) controls.current.enabled = false;
   };

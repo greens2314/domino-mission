@@ -1,5 +1,5 @@
-import { BOARD_D, BOARD_W, CAR_HEIGHT, LANE_Y0, LANE_Y1, LANE_YS, dominoDir, isBrick } from './catalog';
-import { buildOccupancy, key, key2, occupiedCells } from './board';
+import { CAR_HEIGHT, LANE_Y0, LANE_Y1, LANE_YS, dominoDir, isBrick } from './catalog';
+import { buildOccupancy, hkey, key, key2, occupiedCells } from './board';
 import { simulate } from './simulate';
 import type { BoardPiece, Cell, SimulationResult } from './types';
 
@@ -136,30 +136,41 @@ export function validateMaterialUse(board: BoardPiece[]): string | null {
 
 export const DIAMOND_ROWS = [2, 4, 6, 8, 10, 10, 8, 6, 4, 2];
 
-/** Finds a filled 10 x 10 diamond of dominoes (standing or fallen) on the ground. */
+/**
+ * Finds a filled 10 x 10 diamond of dominoes (standing or fallen) on the ground.
+ * Rows run along x or y; row spacing may be 1.0 or 0.5 cm (dominoes may be packed
+ * at half cells along their fall direction); within a row dominoes sit on whole cells.
+ */
 export function findDiamond(board: BoardPiece[]): Set<string> | null {
-  const ground = new Map<string, BoardPiece>();
-  for (const p of board) if (p.kind === 'domino' && p.z === 0) ground.set(key2(p.x, p.y), p);
-  if (ground.size < 60) return null;
+  const ground = board.filter((p) => p.kind === 'domino' && p.z === 0);
+  if (ground.length < 60) return null;
+  const idx = new Map<string, BoardPiece>();
+  for (const p of ground) idx.set(hkey(p.x, p.y), p);
 
-  // orientation A: rows along x; orientation B: rows along y
   for (const orient of ['x', 'y'] as const) {
-    const rowMax = orient === 'x' ? BOARD_W : BOARD_D;
-    const spanMax = orient === 'x' ? BOARD_D : BOARD_W;
-    for (let r0 = 0; r0 + 10 <= rowMax; r0++) {
-      for (let c = 5; c <= spanMax - 5; c++) {
-        const ids = new Set<string>();
-        let ok = true;
-        for (let i = 0; i < 10 && ok; i++) {
-          const s = DIAMOND_ROWS[i];
-          for (let j = c - s / 2; j < c + s / 2; j++) {
-            const cellKey = orient === 'x' ? key2(r0 + i, j) : key2(j, r0 + i);
-            const d = ground.get(cellKey);
-            if (!d) { ok = false; break; }
-            ids.add(d.id);
+    const rowOf = (p: BoardPiece) => (orient === 'x' ? p.x : p.y);
+    const spanOf = (p: BoardPiece) => (orient === 'x' ? p.y : p.x);
+    const rowStarts = [...new Set(ground.map(rowOf))].sort((a, b) => a - b);
+    const spanValues = [...new Set(ground.map(spanOf).filter(Number.isInteger))];
+    const centers = new Set<number>();
+    for (const q of spanValues) for (let s = 1; s <= 5; s++) { centers.add(q + s); centers.add(q - s + 1); }
+
+    for (const spacing of [1, 0.5]) {
+      for (const r0 of rowStarts) {
+        for (const c of centers) {
+          const ids = new Set<string>();
+          let ok = true;
+          for (let i = 0; i < 10 && ok; i++) {
+            const size = DIAMOND_ROWS[i];
+            const r = r0 + i * spacing;
+            for (let q = c - size / 2; q < c + size / 2; q++) {
+              const d = idx.get(orient === 'x' ? hkey(r, q) : hkey(q, r));
+              if (!d) { ok = false; break; }
+              ids.add(d.id);
+            }
           }
+          if (ok && ids.size === 60) return ids;
         }
-        if (ok) return ids;
       }
     }
   }
