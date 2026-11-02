@@ -166,7 +166,7 @@ export const useStore = create<Store>()(
         });
       },
 
-      resetAll: () => set({ game: null, tool: 'select', material: null, selectedId: null, movingId: null, rulerPoints: [], playback: null, modal: null }),
+      resetAll: () => set({ game: null, tool: 'select', material: null, rotation: 0, selectedId: null, movingId: null, hover: null, rulerPoints: [], playback: null, modal: null, message: null }),
 
       loadDemoLayout: () => {
         const g = get().game;

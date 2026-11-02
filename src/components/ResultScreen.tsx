@@ -28,9 +28,22 @@ export default function ResultScreen() {
             )}
             {game.acceptance === 'expired' && <p className="reason">時間到期時尚未送交正式驗收。</p>}
           </div>
-          <button className="btn btn-blue btn-xl" disabled={busy} onClick={async () => { setBusy(true); try { await generatePdf(game); } finally { setBusy(false); } }}>
-            {busy ? '產生中…' : '下載驗收 PDF'}
-          </button>
+          <div className="btn-col">
+            <button className="btn btn-blue btn-xl" disabled={busy} onClick={async () => { setBusy(true); try { await generatePdf(game); } finally { setBusy(false); } }}>
+              {busy ? '產生中…' : '下載驗收 PDF'}
+            </button>
+            {!confirmReset ? (
+              <button className="btn btn-ghost" onClick={() => setConfirmReset(true)}>重新開始</button>
+            ) : (
+              <div className="confirm-inline">
+                <p>重新開始會清空施工板與這台電腦的紀錄。請先確認已下載 PDF。</p>
+                <div className="btn-row">
+                  <button className="btn btn-red" onClick={resetAll}>確認重新開始</button>
+                  <button className="btn btn-ghost" onClick={() => setConfirmReset(false)}>取消</button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="result-grid">
@@ -90,17 +103,6 @@ export default function ResultScreen() {
           )}
         </section>
 
-        <div className="result-foot">
-          {!confirmReset ? (
-            <button className="btn btn-ghost" onClick={() => setConfirmReset(true)}>開始新的專案（清除這台電腦的紀錄）…</button>
-          ) : (
-            <div className="btn-row">
-              <span>請先確認已下載 PDF。清除後無法復原。</span>
-              <button className="btn btn-red" onClick={resetAll}>確認清除並開始新專案</button>
-              <button className="btn btn-ghost" onClick={() => setConfirmReset(false)}>取消</button>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

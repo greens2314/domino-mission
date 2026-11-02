@@ -9,6 +9,7 @@ import { checkPlacement, footprintCells, buildOccupancy, key2 } from '../game/bo
 import type { BoardPiece, Rotation } from '../game/types';
 import { playbackState, useStore, type Material } from '../store';
 import { registerThree } from '../snapshot';
+import { DEFAULT_CAMERA_POS, DEFAULT_TARGET, MAX_DISTANCE, MIN_DISTANCE, registerControls } from '../camera';
 
 /* ------------------------------------------------------------------ */
 /* Snapshot bridge: registers renderer handles for src/snapshot.ts.     */
@@ -89,7 +90,6 @@ function Table() {
         <boxGeometry args={[CAR_LENGTH + 1, 0.12, CAR_WIDTH + 1]} />
         <meshStandardMaterial color="#3a4f6b" roughness={0.9} />
       </mesh>
-      <TextSprite text="起點" position={[-CAR_LENGTH / 2 - 0.5, 1.4, (LANE_Y0 + LANE_Y1 + 1) / 2]} />
       {/* direction arrows along the lane */}
       {[8, 20, 32, 44].map((x) => (
         <mesh key={x} position={[x, 0.012, (LANE_Y0 + LANE_Y1 + 1) / 2]} rotation={[-Math.PI / 2, 0, -Math.PI / 2]}>
@@ -355,6 +355,10 @@ function World() {
   const [fallenNow, setFallenNow] = useState<Set<string> | null>(null);
   const dragging = useRef<{ id: string; startCell: string; moved: boolean } | null>(null);
   const controls = useRef<any>(null);
+  useEffect(() => {
+    registerControls(controls.current);
+    return () => registerControls(null);
+  }, []);
 
   const locked = !game || game.acceptance !== 'not-submitted' || !!playback;
 
@@ -491,10 +495,10 @@ function World() {
 
       <OrbitControls
         ref={controls}
-        target={[BOARD_W / 2 - 6, 0, BOARD_D / 2]}
+        target={DEFAULT_TARGET.toArray()}
         maxPolarAngle={Math.PI / 2 - 0.08}
-        minDistance={12}
-        maxDistance={110}
+        minDistance={MIN_DISTANCE}
+        maxDistance={MAX_DISTANCE}
         enablePan
         panSpeed={0.8}
         makeDefault
@@ -510,7 +514,7 @@ export default function Scene() {
       shadows
       dpr={[1, 1.5]}
       gl={{ preserveDrawingBuffer: true, antialias: true }}
-      camera={{ position: [BOARD_W / 2 - 6, 34, BOARD_D / 2 + 44], fov: 40, near: 0.5, far: 400 }}
+      camera={{ position: DEFAULT_CAMERA_POS.toArray(), fov: 40, near: 0.5, far: 400 }}
       onCreated={(state) => registerThree({ gl: state.gl, scene: state.scene, camera: state.camera })}
       onPointerMissed={() => { /* handled by plane */ }}
     >

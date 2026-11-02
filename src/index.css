@@ -188,3 +188,16 @@ kbd { background: #e9e2d0; border: 1px solid #c9b995; border-radius: 4px; paddin
   .app { grid-template-columns: 290px 1fr 250px; }
   :root { font-size: 14px; }
 }
+
+/* ---------- camera controls ---------- */
+.cam { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; z-index: 5; }
+.cam-btn { width: 36px; height: 36px; border: 0; border-radius: 10px; background: rgba(244,236,216,0.95); color: var(--navy); font-weight: 900; font-size: 16px; cursor: pointer; box-shadow: 0 2px 0 rgba(0,0,0,0.35); display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.cam-btn:hover { background: #fff; }
+.cam-btn:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,0.35); }
+.cam-btn:focus-visible { outline: 3px solid var(--blue); }
+.cam-zoom { display: flex; align-items: center; gap: 6px; background: rgba(23,42,70,0.75); padding: 6px 8px; border-radius: 12px; }
+.cam-zoom input[type="range"] { width: 140px; accent-color: var(--yellow); cursor: pointer; }
+.cam-pct { color: var(--cream); font-size: 12px; font-weight: 800; min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+.cam-pad { display: grid; grid-template-columns: 36px 36px 36px; grid-template-rows: 36px 36px 36px; gap: 4px; grid-template-areas: ". up ." "left mid right" ". down ."; background: rgba(23,42,70,0.75); padding: 6px; border-radius: 12px; }
+.cam-reset { background: var(--yellow); }
+.cam-rot { display: flex; gap: 4px; background: rgba(23,42,70,0.75); padding: 6px; border-radius: 12px; }
