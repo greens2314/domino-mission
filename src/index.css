@@ -208,3 +208,6 @@ kbd { background: #e9e2d0; border: 1px solid #c9b995; border-radius: 4px; paddin
 .cam-group { display: flex; gap: 3px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,0.2); }
 .cam-reset { background: var(--yellow); font-size: 13px; white-space: nowrap; }
 @media (max-width: 1440px) { .cam-zoom input[type="range"] { width: 80px; } .mode-btn { padding: 0 8px; font-size: 13px; } .cam { gap: 5px; } .cam-group { padding-left: 5px; gap: 2px; } .cam-btn { min-width: 29px; height: 30px; padding: 0 4px; font-size: 14px; } .cam-reset span { display: none; } }
+
+.restart-btn { align-self: center; padding: 8px 10px; font-size: 13px; white-space: nowrap; border-color: #7f8da8; background: transparent; color: var(--cream); }
+.restart-btn:hover:not(:disabled) { background: rgba(255,255,255,0.1); }

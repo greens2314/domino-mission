@@ -23,6 +23,7 @@ export type ModalKind =
   | { kind: 'rehearse' }
   | { kind: 'accept' }
   | { kind: 'remove'; pieceId: string }
+  | { kind: 'restart' }
   | { kind: 'camera-hint' };
 
 type Point = { x: number; y: number };
@@ -42,6 +43,9 @@ export type Store = {
   modal: ModalKind | null;
   playback: Playback | null;
   nowMs: number;
+  /** the 收回材料 confirmation is shown once per page load */
+  removeHintShown: boolean;
+  requestRemove: (pieceId: string) => void;
 
   // ---- lifecycle ----
   startGame: (teamName: string) => void;
@@ -118,6 +122,12 @@ export const useStore = create<Store>()(
       modal: null,
       playback: null,
       nowMs: Date.now(),
+      removeHintShown: false,
+
+      requestRemove: (pieceId) => {
+        if (get().removeHintShown) { set({ selectedId: pieceId }); get().removeSelected(); return; }
+        set({ modal: { kind: 'remove', pieceId } });
+      },
 
       flash: (text) => set({ message: { text, at: Date.now() } }),
       log: (text) => {
@@ -279,6 +289,7 @@ export const useStore = create<Store>()(
           },
           selectedId: null,
           modal: null,
+          removeHintShown: true,
         });
       },
 

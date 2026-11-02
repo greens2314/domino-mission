@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BoardBuilder, buildPassingBoard } from './fixtures';
 import { checkPlacement, dominoBox, boxesOverlap } from './board';
-import { simulate } from './simulate';
+import { simulate, propagate } from './simulate';
 import {
   detectGates, brickComponents, runAcceptance, validateGates, validatePillars,
   validateStairsShape, validateDiamondShape, validateMaterialUse, findDiamond, countReversals,
@@ -20,7 +20,7 @@ describe('placement', () => {
     const b = new BoardBuilder();
     b.add('domino', 5, 5, 0);
     expect(checkPlacement(b.pieces, 'brick-1x1', 5, 5, 0).ok).toBe(false);
-    expect(checkPlacement(b.pieces, 'brick-1x8', 45, 0, 0).ok).toBe(false);
+    expect(checkPlacement(b.pieces, 'brick-1x8', 75, 0, 0).ok).toBe(false);
   });
   it('does not let anything rest on a domino', () => {
     const b = new BoardBuilder();
@@ -186,5 +186,21 @@ describe('half-cell dominoes', () => {
     const s = simulate(b.pieces);
     expect(s.falls).toHaveLength(b.pieces.length);
     expect(findDiamond(b.pieces)?.size).toBe(60);
+  });
+});
+
+describe('drops', () => {
+  it('a domino on top of a column topples a ground domino right in front of it', () => {
+    const b = new BoardBuilder();
+    b.step(5, 5, 8, 0);
+    b.add('domino', 6, 5, 0, 0);
+    b.add('domino', 7, 5, 0, 0);
+    expect(propagate(b.pieces, [b.pieces.find((p) => p.kind === 'domino' && p.z === 8)!.id])).toHaveLength(3);
+  });
+  it('a domino cannot climb more than one layer', () => {
+    const b = new BoardBuilder();
+    b.add('domino', 5, 5, 0, 0);
+    b.step(6, 5, 2, 0);
+    expect(propagate(b.pieces, [b.pieces[0].id])).toHaveLength(1);
   });
 });

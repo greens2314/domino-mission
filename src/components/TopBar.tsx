@@ -48,6 +48,7 @@ export default function TopBar() {
         <span className="stat-label">剩餘採購機會</span>
         <span className="stat-value">{Math.max(0, FREE_ORDERS - game.orders.length)} 次</span>
       </div>
+      <button className="btn btn-ghost restart-btn" onClick={() => useStore.getState().openModal({ kind: 'restart' })} title="清除所有紀錄並重頭開始">重頭開始</button>
     </header>
   );
 }

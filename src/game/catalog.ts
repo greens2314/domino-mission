@@ -2,8 +2,8 @@ import type { BrickKind, PieceKind, Rotation } from './types';
 
 /* ---------- Board & world constants (internal only) ---------- */
 
-export const BOARD_W = 48;
-export const BOARD_D = 28;
+export const BOARD_W = 80;
+export const BOARD_D = 36;
 
 /** Car lane: fixed rows the car drives along, from x = -CAR_LENGTH toward +x. */
 export const LANE_Y0 = 12;

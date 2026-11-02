@@ -12,10 +12,10 @@ export type ControlsLike = {
   removeEventListener: (type: string, fn: () => void) => void;
 };
 
-export const DEFAULT_CAMERA_POS = new THREE.Vector3(BOARD_W / 2 - 6, 34, BOARD_D / 2 + 44);
-export const DEFAULT_TARGET = new THREE.Vector3(BOARD_W / 2 - 6, 0, BOARD_D / 2);
+export const DEFAULT_CAMERA_POS = new THREE.Vector3(BOARD_W / 2 - 8, 48, BOARD_D / 2 + 64);
+export const DEFAULT_TARGET = new THREE.Vector3(BOARD_W / 2 - 8, 0, BOARD_D / 2);
 export const MIN_DISTANCE = 12;
-export const MAX_DISTANCE = 110;
+export const MAX_DISTANCE = 170;
 
 const state: { controls: ControlsLike | null } = { controls: null };
 const listeners = new Set<(distance: number) => void>();

@@ -55,12 +55,25 @@ export default function Modals() {
     );
   }
 
+  if (modal.kind === 'restart') {
+    return (
+      <Dialog title="重頭開始" onClose={close}>
+        <p>這會清除這台電腦上本次專案的所有紀錄（施工板、採購、時間），回到輸入小組名稱的畫面，且無法復原。</p>
+        <div className="btn-row end">
+          <button className="btn btn-ghost" onClick={close}>取消</button>
+          <button className="btn btn-red" onClick={() => useStore.getState().resetAll()}>確認清除並重頭開始</button>
+        </div>
+      </Dialog>
+    );
+  }
+
   if (modal.kind === 'remove') {
     const p = game.board.find((b) => b.id === modal.pieceId);
     if (!p) { close(); return null; }
     return (
       <Dialog title="收回材料" onClose={close}>
         <p>將這個{PIECES[p.kind].label}收回庫存？材料會回到庫存可再使用，但已付的成本不會退還。</p>
+        <p className="muted small">之後收回材料不會再詢問。</p>
         <div className="btn-row end">
           <button className="btn btn-ghost" onClick={close}>取消</button>
           <button className="btn btn-red" onClick={() => { selectPiece(p.id); removeSelected(); }}>收回</button>

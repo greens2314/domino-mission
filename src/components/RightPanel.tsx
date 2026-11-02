@@ -10,7 +10,7 @@ export default function RightPanel() {
   const tool = useStore((s) => s.tool);
   const material = useStore((s) => s.material);
   const playback = useStore((s) => s.playback);
-  const { openModal, beginMove, rotateSelected, restandSelected, cancelMove, rotateGhost, pickMaterial } = useStore.getState();
+  const { openModal, beginMove, rotateSelected, restandSelected, cancelMove, rotateGhost, pickMaterial, requestRemove } = useStore.getState();
   const selected = selectedId ? game.board.find((b) => b.id === selectedId) : undefined;
 
   return (
@@ -51,7 +51,7 @@ export default function RightPanel() {
               {selected.fallen && <button className="btn btn-yellow" onClick={restandSelected}>扶正這枚骨牌</button>}
               <button className="btn btn-ghost" onClick={() => beginMove(selected.id)}>移動</button>
               <button className="btn btn-ghost" onClick={rotateSelected}>旋轉 90°</button>
-              <button className="btn btn-ghost danger-ghost" onClick={() => openModal({ kind: 'remove', pieceId: selected.id })}>收回到庫存…</button>
+              <button className="btn btn-ghost danger-ghost" onClick={() => requestRemove(selected.id)}>收回到庫存</button>
             </div>
           </section>
         )}

@@ -52,7 +52,7 @@ export function simulate(board: BoardPiece[]): SimulationResult {
  * A falling domino (height 2) reaches:
  *  - straight ahead: the nearest standing domino within 2.0 cells
  *  - diagonally (one row to either side): dominoes within 1.0 cell ahead
- * and only if the height difference is at most one layer.
+ * A domino may climb at most one layer per step, but may drop any height (falling off the edge).
  */
 export function propagate(board: BoardPiece[], startIds: string[]): SimulationResult['falls'] {
   const byId = new Map(board.map((p) => [p.id, p] as const));
@@ -92,7 +92,7 @@ export function propagate(board: BoardPiece[], startIds: string[]): SimulationRe
           const list = standing.get(hkey(a.x + dx * f + px * p, a.y + dy * f + py * p));
           if (!list) continue;
           for (const b of list) {
-            if (Math.abs(b.z - a.z) > 1) continue;
+            if (b.z - a.z > 1) continue;
             targets.push(b);
             if (p === 0) straightHit = true;
           }

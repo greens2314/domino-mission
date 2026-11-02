@@ -101,7 +101,7 @@ function Table() {
         <meshStandardMaterial color="#3a4f6b" roughness={0.9} />
       </mesh>
       {/* direction arrows along the lane */}
-      {[8, 20, 32, 44].map((x) => (
+      {[8, 20, 32, 44, 56, 68].map((x) => (
         <mesh key={x} position={[x, 0.012, (LANE_Y0 + LANE_Y1 + 1) / 2]} rotation={[-Math.PI / 2, 0, -Math.PI / 2]}>
           <coneGeometry args={[0.45, 1.2, 3]} />
           <meshBasicMaterial color="#c9b17c" transparent opacity={0.8} />
@@ -451,7 +451,7 @@ function World() {
         else if (s.selectedId) s.rotateSelected();
       }
       if (e.key === 'Escape') { if (s.movingId) cancelMove(); else { s.pickMaterial(null); s.selectPiece(null); s.clearRuler(); } }
-      if (e.key === 'Delete' && s.selectedId && !s.movingId) s.openModal({ kind: 'remove', pieceId: s.selectedId });
+      if (e.key === 'Delete' && s.selectedId && !s.movingId) s.requestRemove(s.selectedId);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -464,8 +464,8 @@ function World() {
     <>
       <PlaybackDriver onFrame={(f, s) => { setCarFront(f); setFallenNow(s); }} />
       <ambientLight intensity={0.55} />
-      <directionalLight position={[30, 50, 20]} intensity={1.4} castShadow shadow-mapSize={[2048, 2048]}>
-        <orthographicCamera attach="shadow-camera" args={[-40, 40, 40, -40, 1, 150]} />
+      <directionalLight position={[50, 60, 30]} intensity={1.4} castShadow shadow-mapSize={[2048, 2048]}>
+        <orthographicCamera attach="shadow-camera" args={[-60, 60, 60, -60, 1, 200]} />
       </directionalLight>
       <hemisphereLight args={['#dfe9ff', '#5a3d1e', 0.5]} />
 

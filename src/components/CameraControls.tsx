@@ -18,7 +18,7 @@ export default function StageToolbar() {
   useEffect(() => onDistanceChange(setDist), []);
   const sliderValue = Math.round(((MAX_DISTANCE - distance) / (MAX_DISTANCE - MIN_DISTANCE)) * 100);
   const onSlider = (v: number) => setDistance(MAX_DISTANCE - (v / 100) * (MAX_DISTANCE - MIN_DISTANCE));
-  const zoomPct = Math.round((60 / distance) * 100);
+  const zoomPct = Math.round((82 / distance) * 100);
 
   const selectMode = tool === 'select' && !movingId;
   const placeMode = tool === 'place' && !!material;
