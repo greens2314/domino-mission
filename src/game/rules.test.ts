@@ -43,7 +43,7 @@ describe('gates and pillars', () => {
   it('detects the two fixture gates', () => {
     const board = buildPassingBoard();
     const gates = detectGates(brickComponents(board));
-    expect(gates.map((g) => g.centerX)).toEqual([2, 12]);
+    expect(gates.map((g) => g.centerX)).toEqual([3, 14]);
     expect(validateGates(board)).toBeNull();
     expect(validatePillars(board)).toBeNull();
   });
@@ -135,20 +135,20 @@ describe('acceptance', () => {
     expect(r.reason).toMatch(/通過兩座門之前/);
   });
   it('reports the first failing rule in order (gates before chain)', () => {
-    const board = buildPassingBoard().filter((p) => !(p.kind === 'brick-1x6' && p.x === 12));
+    const board = buildPassingBoard().filter((p) => !(p.kind === 'brick-1x6' && p.x === 14));
     const r = runAcceptance(board);
     expect(r.reason).toMatch(/門/);
   });
   it('fails when the chain breaks inside the diamond', () => {
     const board = buildPassingBoard();
     // remove one domino from the diamond's middle row → shape incomplete
-    const idx = board.findIndex((p) => p.kind === 'domino' && p.x === 38 && p.y === 8);
+    const idx = board.findIndex((p) => p.kind === 'domino' && p.x === 42 && p.y === 13);
     board.splice(idx, 1);
     expect(runAcceptance(board).reason).toMatch(/鑽石陣/);
   });
   it('fails when a stair domino points the wrong way', () => {
     const board = buildPassingBoard();
-    const d = board.find((p) => p.kind === 'domino' && p.x === 22 && p.y === 7)!;
+    const d = board.find((p) => p.kind === 'domino' && p.x === 33 && p.y === 12)!;
     d.rotation = 90;
     const r = runAcceptance(board);
     expect(r.ok).toBe(false);

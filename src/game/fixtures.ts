@@ -1,6 +1,6 @@
 import type { BoardPiece, PieceKind, Rotation } from './types';
 
-/** Small builder used by tests and the dev "sample layout" helper. */
+/** Small builder used by tests and the teacher's demo layout (?demo). */
 export class BoardBuilder {
   pieces: BoardPiece[] = [];
   private n = 0;
@@ -43,23 +43,29 @@ export class BoardBuilder {
   }
 }
 
-/** A complete, passing layout (also useful for demos). */
+/**
+ * A complete, passing layout that mirrors the course diagram:
+ * car → gate → gate → S path between two pillars → 8-step stairs → cliff → diamond.
+ */
 export function buildPassingBoard(): BoardPiece[] {
   const b = new BoardBuilder();
-  b.gate(2);
-  b.gate(12);
-  b.column(14, 2, 7);
-  b.column(14, 24, 7);
-  // S path: → then ↓ then ← then ↓ then →
-  b.line(15, 13, 1, 0, 3, 0);      // (15..17,13) →
-  b.line(18, 13, 0, -1, 3, 270);   // (18,13..11) ↓
-  b.line(18, 10, -1, 0, 3, 180);   // (18..16,10) ←
-  b.line(15, 10, 0, -1, 3, 270);   // (15,10..8) ↓
-  b.line(15, 7, 1, 0, 3, 0);       // (15..17,7) →
-  // stairs up 1..8 then down 7..1 along y=7
-  for (let k = 1; k <= 8; k++) b.step(17 + k, 7, k, 0);       // x 18..25
-  for (let k = 7; k >= 1; k--) b.step(25 + (8 - k), 7, k, 0); // x 26..32
-  b.add('domino', 33, 7, 0, 0);
-  b.diamond(34, 8);
+  // two gates across the lane, 11 cm apart
+  b.gate(3);
+  b.gate(14);
+  // two free-standing pillars (7 high) behind the gates, either side of the S path
+  b.column(22, 5, 7);
+  b.column(22, 21, 7);
+  // S path: forward along x with three bends in y (+y, −y, +y)
+  b.line(16, 13, 1, 0, 4, 0);      // (16..19,13) →   start domino is (16,13) in the lane
+  b.line(20, 13, 0, 1, 3, 90);     // (20,13..15) ↓ (+y, toward the viewer)
+  b.line(20, 16, 1, 0, 4, 0);      // (20..23,16) →
+  b.line(24, 16, 0, -1, 7, 270);   // (24,16..10) ↑ (−y)
+  b.line(24, 9, 1, 0, 3, 0);       // (24..26,9) →
+  b.line(27, 9, 0, 1, 3, 90);      // (27,9..11) ↓ (+y)
+  b.line(27, 12, 1, 0, 3, 0);      // (27..29,12) →
+  // stairs: exactly 8 levels climbing along x at y=12
+  for (let k = 1; k <= 8; k++) b.step(29 + k, 12, k, 0); // x 30..37
+  // cliff: the top domino drops straight onto the diamond's first row
+  b.diamond(38, 13);                // rows x 38..47, first row covers y 12..13
   return b.pieces;
 }
