@@ -86,8 +86,6 @@ export type Store = {
   openModal: (m: ModalKind | null) => void;
   rehearse: () => void;
   submitAcceptance: (snapshot: string) => void;
-  /** back to the construction screen with the layout as it stood at acceptance */
-  restoreAfterAcceptance: () => void;
   finishPlayback: () => void;
 
   flash: (text: string) => void;
@@ -400,7 +398,6 @@ export const useStore = create<Store>()(
           game: {
             ...g,
             board,
-            preAcceptanceBoard: g.board.map((b) => ({ ...b, fallen: false })),
             acceptanceRuns: (g.acceptanceRuns ?? 0) + 1,
             carOnBoard: null,
             endedAt: nowIso(),
@@ -425,21 +422,6 @@ export const useStore = create<Store>()(
         if (!pb) return;
         set({ playback: null, modal: pb.mode === 'rehearsal' && get().game?.lastRehearsal ? { kind: 'rehearsal-result' } : get().modal });
       },
-
-      restoreAfterAcceptance: () => {
-        const g = get().game;
-        if (!g || g.acceptance === 'not-submitted' || !g.preAcceptanceBoard) return;
-        if (remainingMs(g) <= 0) { get().flash('時間已到期，無法繼續修正。'); return; }
-        set({
-          game: {
-            ...g,
-            board: g.preAcceptanceBoard,
-            acceptance: 'not-submitted',
-            endedAt: undefined,
-            failureReason: undefined,
-            finalSnapshot: undefined,
-            log: [...g.log, { at: nowIso(), text: '已恢復驗收時的配置，繼續修正。' }],
-          },
           history: [],
           selectedId: null, movingId: null, material: null, tool: 'select', modal: null,
         });

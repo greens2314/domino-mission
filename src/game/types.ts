@@ -56,8 +56,6 @@ export type GameState = {
   acceptance: AcceptanceStatus;
   failureReason?: string;
   finalSnapshot?: string;
-  /** standing layout at the moment of acceptance, so students can restore it and keep fixing */
-  preAcceptanceBoard?: BoardPiece[];
   /** checklist from the most recent rehearsal */
   lastRehearsal?: { at: string; items: { label: string; ok: boolean; detail: string }[] };
   acceptanceRuns?: number;
