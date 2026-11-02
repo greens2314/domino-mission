@@ -123,9 +123,19 @@ export function validatePillars(board: BoardPiece[]): string | null {
   const ok = others.filter(qualifies);
   if (ok.length >= 2) return null;
 
-  // explain what each other structure is missing, tallest first
-  const notes = others
-    .filter((c) => !qualifies(c))
+  const notes = describeNonPillars(board);
+  return `門後沒有 2 根高度至少 ${PILLAR_MIN_HEIGHT} cm 的獨立積木柱子（目前符合：${ok.length} 根）。${notes.length ? notes.join('；') + '。' : ''}`;
+}
+
+/** Why each other brick structure (tallest first, up to 4) does not count as a pillar. */
+export function describeNonPillars(board: BoardPiece[]): string[] {
+  const comps = brickComponents(board);
+  const gates = detectGates(comps);
+  const gateComps = new Set(gates.map((g) => g.component));
+  const lastGateX = gates.length ? Math.max(...gates.map((g) => g.maxX)) : -1;
+  return comps
+    .filter((c) => !gateComps.has(c) && !carriesDominoes(board, c))
+    .filter((c) => !(c.maxZ + 1 >= PILLAR_MIN_HEIGHT && c.minX > lastGateX))
     .sort((p, q) => q.maxZ - p.maxZ)
     .slice(0, 4)
     .map((c) => {
@@ -135,8 +145,6 @@ export function validatePillars(board: BoardPiece[]): string | null {
       if (c.minX <= lastGateX) problems.push('不在兩門之後');
       return `高 ${h} cm 的積木結構：${problems.join('、')}`;
     });
-  const gateNote = others.length < 2 && comps.length - others.length > 2 ? '；有積木結構與門相連，被視為門的一部分' : '';
-  return `門後沒有 2 根高度至少 ${PILLAR_MIN_HEIGHT} cm 的獨立積木柱子（目前符合：${ok.length} 根）。${notes.length ? notes.join('；') + '。' : ''}${gateNote}`;
 }
 
 export function validateMaterialUse(board: BoardPiece[]): string | null {
@@ -362,4 +370,72 @@ export function runAcceptance(board: BoardPiece[]): AcceptanceResult {
   const chain = validateChain(board, route.sim);
   if (chain) return { ok: false, reason: chain, sim: route.sim };
   return { ok: true, sim: route.sim };
+}
+
+/* ------------------------------------------------------------------ */
+/* Rehearsal checklist (shown to students after a full rehearsal)      */
+/* ------------------------------------------------------------------ */
+
+export type DiagnosisItem = { label: string; ok: boolean; detail: string };
+
+/** Item-by-item status of the layout, in plain language, so students know what to fix. */
+export function diagnose(board: BoardPiece[]): { items: DiagnosisItem[]; sim: SimulationResult } {
+  const items: DiagnosisItem[] = [];
+  const comps = brickComponents(board);
+  const gates = detectGates(comps);
+
+  // gates
+  const spread = gates.length >= 2 ? gates[gates.length - 1].centerX - gates[0].centerX : 0;
+  items.push({
+    label: '門',
+    ok: gates.length >= 2 && spread >= 10,
+    detail: `已建 ${gates.length} 座（需 2 座）` + (gates.length >= 2 ? `，兩門距離 ${spread} cm（需 ≥ 10 cm）` : '') +
+      (gates.length < 2 ? '。門＝兩側積木落地、橫梁跨越整條車道、下方小車過得去' : ''),
+  });
+
+  // pillars
+  const pillars = detectPillars(board);
+  const notes = pillars.length < 2 ? describeNonPillars(board) : [];
+  items.push({
+    label: '柱子',
+    ok: pillars.length >= 2,
+    detail: `門後符合 ${pillars.length} 根（需 2 根，高度 ≥ ${PILLAR_MIN_HEIGHT} cm、獨立、上面不站骨牌）` + (notes.length ? `。${notes.join('；')}` : ''),
+  });
+
+  // stairs
+  const levels = [...stairLevels(board)].sort((a, b) => a - b);
+  const stairsReason = validateStairsShape(board);
+  items.push({
+    label: '骨牌階梯',
+    ok: !stairsReason,
+    detail: levels.length ? `目前有第 ${levels.join('、')} 層（需第 1–8 層各至少一枚）` + (stairsReason ? `。${stairsReason}` : '') : '還沒有架高的骨牌',
+  });
+
+  // diamond
+  const diamond = findDiamond(board);
+  const groundCount = board.filter((p) => p.kind === 'domino' && p.z === 0).length;
+  items.push({
+    label: '鑽石陣',
+    ok: !!diamond,
+    detail: diamond ? `已辨識出填滿的菱形，共 ${diamond.size} 枚` : `未辨識出菱形（需 ≥ 60 枚相鄰骨牌排成填滿的菱形；目前地面骨牌 ${groundCount} 枚）`,
+  });
+
+  // car route
+  const route = validateCarRoute(board);
+  items.push({
+    label: '小車',
+    ok: !route.reason,
+    detail: route.reason ?? '小車通過兩門並碰到起始骨牌',
+  });
+
+  // chain
+  const total = board.filter((p) => p.kind === 'domino' && !p.fallen).length;
+  const chainReason = route.reason ? null : validateChain(board, route.sim);
+  items.push({
+    label: '連鎖',
+    ok: !route.reason && !chainReason,
+    detail: `這次倒下 ${route.sim.falls.length} / ${total} 枚` + (route.reason ? '' : chainReason ? `。${chainReason}` : '。S 路徑、階梯、鑽石陣依序完成'),
+  });
+
+  return { items, sim: route.sim };
 }

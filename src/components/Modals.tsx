@@ -67,6 +67,27 @@ export default function Modals() {
     );
   }
 
+  if (modal.kind === 'rehearsal-result') {
+    const r = game.lastRehearsal;
+    if (!r) { close(); return null; }
+    const passed = r.items.filter((i) => i.ok).length;
+    return (
+      <Dialog title={`演練結果（第 ${game.rehearsals} 次）：${passed} / ${r.items.length} 項符合`} onClose={close}>
+        <ul className="checklist">
+          {r.items.map((i) => (
+            <li key={i.label} className={i.ok ? 'ok' : 'bad'}>
+              <span className="check-mark">{i.ok ? '✓' : '✗'}</span>
+              <b>{i.label}</b>
+              <span className="check-detail">{i.detail}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="muted small">倒下的骨牌請逐一扶正後再調整。正式驗收以同樣規則判定。</p>
+        <div className="btn-row end"><button className="btn btn-blue" onClick={close}>知道了</button></div>
+      </Dialog>
+    );
+  }
+
   if (modal.kind === 'remove') {
     const p = game.board.find((b) => b.id === modal.pieceId);
     if (!p) { close(); return null; }

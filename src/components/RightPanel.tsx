@@ -82,6 +82,11 @@ export default function RightPanel() {
               <small>僅 1 次，送驗後鎖定</small>
             </button>
             <p className="muted small">已演練 {game.rehearsals} 次。</p>
+            {game.lastRehearsal && (
+              <button className="btn btn-ghost" onClick={() => openModal({ kind: 'rehearsal-result' })}>
+                查看最近演練結果（{game.lastRehearsal.items.filter((i) => i.ok).length} / {game.lastRehearsal.items.length} 項符合）
+              </button>
+            )}
           </section>
         )}
       </div>

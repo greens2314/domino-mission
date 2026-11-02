@@ -4,7 +4,7 @@ import {
   CAR_AUTH_CODE, CAR_LENGTH, GAME_MINUTES, LANE_Y0, START_BUDGET, emptyInventory, nextRotation, PIECES,
 } from './game/catalog';
 import { checkPlacement, inBoard, newId, piecesAbove } from './game/board';
-import { runAcceptance } from './game/rules';
+import { runAcceptance, diagnose } from './game/rules';
 import { simulate } from './game/simulate';
 import { buildOrder, piecesFromOrder, type CartItem } from './game/shop';
 import { buildPassingBoard } from './game/fixtures';
@@ -24,6 +24,7 @@ export type ModalKind =
   | { kind: 'accept' }
   | { kind: 'remove'; pieceId: string }
   | { kind: 'restart' }
+  | { kind: 'rehearsal-result' }
   | { kind: 'camera-hint' };
 
 type Point = { x: number; y: number };
@@ -369,10 +370,15 @@ export const useStore = create<Store>()(
         const g = get().game;
         if (!isRunning(g) || !g.carUnlocked) return;
         const sim = simulate(g.board);
+        const report = diagnose(g.board);
         const fallen = new Set(sim.falls.map((f) => f.id));
         const board = g.board.map((b) => (fallen.has(b.id) ? { ...b, fallen: true } : b));
         set({
-          game: { ...g, board, carOnBoard: null, rehearsals: g.rehearsals + 1, log: [...g.log, { at: nowIso(), text: `第 ${g.rehearsals + 1} 次全程演練。` }] },
+          game: {
+            ...g, board, carOnBoard: null, rehearsals: g.rehearsals + 1,
+            lastRehearsal: { at: nowIso(), items: report.items },
+            log: [...g.log, { at: nowIso(), text: `第 ${g.rehearsals + 1} 次全程演練。` }],
+          },
           modal: null,
           selectedId: null,
           movingId: null,
@@ -414,7 +420,11 @@ export const useStore = create<Store>()(
         setTimeout(() => get().finishPlayback(), playbackDuration(result.sim) * 1000 + 100);
       },
 
-      finishPlayback: () => set({ playback: null }),
+      finishPlayback: () => {
+        const pb = get().playback;
+        if (!pb) return;
+        set({ playback: null, modal: pb.mode === 'rehearsal' && get().game?.lastRehearsal ? { kind: 'rehearsal-result' } : get().modal });
+      },
 
       restoreAfterAcceptance: () => {
         const g = get().game;
