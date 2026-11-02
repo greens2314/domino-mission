@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { fmtClock } from './TopBar';
 
+const EMPTY_LOG: { at: string; text: string }[] = [];
+
 export default function ActivityLog() {
-  const log = useStore((s) => s.game?.log ?? []);
+  const log = useStore((s) => s.game?.log) ?? EMPTY_LOG;
   const message = useStore((s) => s.message);
   const [visible, setVisible] = useState(false);
   useEffect(() => {

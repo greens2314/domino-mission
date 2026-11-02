@@ -59,6 +59,7 @@ function TextSprite({ text, position, bg = 'rgba(23,42,70,0.9)', fg = '#f4ecd8',
   );
 }
 
+const EMPTY_BOARD: BoardPiece[] = [];
 const WOOD = '#8b5a2b';
 const BOARD = '#efe4c8';
 const LANE = '#e4d2a6';
@@ -273,7 +274,7 @@ function FootprintBox({ kind, rotation, x, y, z, ok }: { kind: BoardPiece['kind'
 
 function Ruler() {
   const pts = useStore((s) => s.rulerPoints);
-  const board = useStore((s) => s.game?.board ?? []);
+  const board = useStore((s) => s.game?.board) ?? EMPTY_BOARD;
   const occ = useMemo(() => buildOccupancy(board), [board]);
   if (!pts.length) return null;
   const [a, b] = pts;
