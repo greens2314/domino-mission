@@ -193,12 +193,12 @@ kbd { background: #e9e2d0; border: 1px solid #c9b995; border-radius: 4px; paddin
 .stage { display: flex; flex-direction: column; }
 .stage-canvas { flex: 1; position: relative; min-height: 0; }
 .stage-canvas canvas { display: block; }
-.toolbar { height: 50px; flex: 0 0 50px; background: var(--navy-2); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 10px; border-top: 3px solid var(--wood); }
+.toolbar { min-height: 50px; flex: 0 0 auto; background: var(--navy-2); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 6px 10px; border-top: 3px solid var(--wood); overflow: hidden; }
 .mode { display: flex; gap: 6px; }
 .mode-btn { height: 34px; border: 2px solid transparent; border-radius: 10px; background: rgba(244,236,216,0.9); color: var(--navy); font: inherit; font-weight: 800; font-size: 14px; padding: 0 12px; cursor: pointer; white-space: nowrap; }
 .mode-btn.active { background: var(--yellow); border-color: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,0.25) inset; }
 .mode-btn:focus-visible, .cam-btn:focus-visible { outline: 3px solid var(--blue); }
-.cam { display: flex; align-items: center; gap: 8px; }
+.cam { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; margin-left: auto; }
 .cam-btn { height: 32px; min-width: 32px; padding: 0 6px; border: 0; border-radius: 8px; background: rgba(244,236,216,0.95); color: var(--navy); font-weight: 900; font-size: 15px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
 .cam-btn:hover { background: #fff; }
 .cam-btn:active { transform: translateY(1px); }
@@ -207,7 +207,7 @@ kbd { background: #e9e2d0; border: 1px solid #c9b995; border-radius: 4px; paddin
 .cam-pct { color: var(--cream); font-size: 12px; font-weight: 800; min-width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
 .cam-group { display: flex; gap: 3px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,0.2); }
 .cam-reset { background: var(--yellow); font-size: 13px; white-space: nowrap; }
-@media (max-width: 1440px) { .cam-zoom input[type="range"] { width: 80px; } .mode-btn { padding: 0 8px; font-size: 13px; } .cam { gap: 5px; } .cam-group { padding-left: 5px; gap: 2px; } .cam-btn { min-width: 29px; height: 30px; padding: 0 4px; font-size: 14px; } .cam-reset span { display: none; } }
+@media (max-width: 1600px) { .cam-zoom input[type="range"] { width: 70px; } .cam-pct { display: none; } .mode-btn { padding: 0 8px; font-size: 13px; } .cam { gap: 4px; } .cam-group { padding-left: 4px; gap: 2px; } .cam-btn { min-width: 28px; height: 30px; padding: 0 4px; font-size: 14px; } .cam-reset span { display: none; } }
 
 .restart-btn { align-self: center; padding: 8px 10px; font-size: 13px; white-space: nowrap; border-color: #7f8da8; background: transparent; color: var(--cream); }
 .restart-btn:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
