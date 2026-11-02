@@ -86,6 +86,11 @@ export type Store = {
   openModal: (m: ModalKind | null) => void;
   rehearse: () => void;
   submitAcceptance: (snapshot: string) => void;
+  /** back to the construction screen with the layout as it stood at acceptance (no second acceptance) */
+  restoreAfterAcceptance: () => void;
+  /** reopen the result page after restoring */
+  showResult: boolean;
+  setShowResult: (v: boolean) => void;
   finishPlayback: () => void;
 
   flash: (text: string) => void;
@@ -134,6 +139,26 @@ export const useStore = create<Store>()(
       nowMs: Date.now(),
       removeHintShown: false,
       history: [],
+      showResult: false,
+      setShowResult: (v) => set({ showResult: v }),
+
+      restoreAfterAcceptance: () => {
+        const g = get().game;
+        if (!g || g.acceptance === 'not-submitted' || !g.preAcceptanceBoard) return;
+        if (remainingMs(g) <= 0) { get().flash('時間已到期，無法繼續修正。'); return; }
+        set({
+          game: {
+            ...g,
+            board: g.preAcceptanceBoard,
+            acceptance: 'not-submitted',
+            endedAt: undefined,
+            log: [...g.log, { at: nowIso(), text: '已恢復驗收時的配置，繼續修正（正式驗收已使用，不能再送驗）。' }],
+          },
+          history: [],
+          showResult: false,
+          selectedId: null, movingId: null, material: null, tool: 'select', modal: null,
+        });
+      },
 
       undo: () => {
         const s = get(); const g = s.game;
@@ -390,7 +415,7 @@ export const useStore = create<Store>()(
 
       submitAcceptance: (snapshot) => {
         const g = get().game;
-        if (!isRunning(g) || !g.carUnlocked) return;
+        if (!isRunning(g) || !g.carUnlocked || g.acceptanceUsed) return;
         const result = runAcceptance(g.board);
         const fallen = new Set(result.sim.falls.map((f) => f.id));
         const board = g.board.map((b) => (fallen.has(b.id) ? { ...b, fallen: true } : b));
@@ -399,6 +424,9 @@ export const useStore = create<Store>()(
             ...g,
             board,
             acceptanceRuns: (g.acceptanceRuns ?? 0) + 1,
+            acceptanceUsed: true,
+            preAcceptanceBoard: g.board.map((b) => ({ ...b, fallen: false })),
+            acceptanceOutcome: { ok: result.ok, reason: result.reason, endedAt: nowIso(), snapshot },
             carOnBoard: null,
             endedAt: nowIso(),
             acceptance: result.ok ? 'success' : 'failed',

@@ -77,10 +77,20 @@ export default function RightPanel() {
               全程演練
               <small>骨牌會倒下，需自行扶正</small>
             </button>
-            <button className="btn btn-blue btn-block" disabled={!!playback} onClick={() => openModal({ kind: 'accept' })}>
-              正式驗收
-              <small>僅 1 次，送驗後鎖定</small>
-            </button>
+            {game.acceptanceUsed ? (
+              <>
+                <button className="btn btn-blue btn-block" disabled>
+                  正式驗收已完成
+                  <small>每組僅 1 次，不能再送驗</small>
+                </button>
+                <button className="btn btn-ghost" onClick={() => useStore.getState().setShowResult(true)}>查看驗收結果</button>
+              </>
+            ) : (
+              <button className="btn btn-blue btn-block" disabled={!!playback} onClick={() => openModal({ kind: 'accept' })}>
+                正式驗收
+                <small>僅 1 次，送驗後鎖定</small>
+              </button>
+            )}
             <p className="muted small">已演練 {game.rehearsals} 次。</p>
             {game.lastRehearsal && (
               <button className="btn btn-ghost" onClick={() => openModal({ kind: 'rehearsal-result' })}>

@@ -39,6 +39,7 @@ export default function Modals() {
     return (
       <Dialog title="正式驗收（僅 1 次）" onClose={close}>
         <p>送交正式驗收後，施工板立即鎖定、計時停止，且不可撤回。驗收一次成功才算專案成功。</p>
+        <p className="muted">驗收後可從結果頁恢復配置繼續修正，但正式驗收只有這一次。</p>
         <p className="muted">送驗前請確認所有骨牌都已扶正、小車已移開。</p>
         <div className="btn-row end">
           <button className="btn btn-ghost" onClick={close}>取消</button>

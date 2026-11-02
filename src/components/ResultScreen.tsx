@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PIECES } from '../game/catalog';
-import { emergencyFees, totalSpent, useStore } from '../store';
+import { emergencyFees, remainingMs, totalSpent, useStore } from '../store';
 import { fmtClock, fmtDuration } from './TopBar';
 import { generatePdf } from '../pdf';
 import { copyLayoutToClipboard } from '../layoutExport';
@@ -8,15 +8,23 @@ import { copyLayoutToClipboard } from '../layoutExport';
 export default function ResultScreen() {
   const game = useStore((s) => s.game)!;
   const resetAll = useStore((s) => s.resetAll);
+  const restoreAfterAcceptance = useStore((s) => s.restoreAfterAcceptance);
+  const setShowResult = useStore((s) => s.setShowResult);
+  const nowMs = useStore((s) => s.nowMs);
+  const reopened = game.acceptance === 'not-submitted'; // viewing again after restoring
+  const outcome = game.acceptanceOutcome;
   const [busy, setBusy] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [copied, setCopied] = useState(false);
-  const success = game.acceptance === 'success';
-  const ended = game.endedAt ?? new Date().toISOString();
+  const success = reopened ? !!outcome?.ok : game.acceptance === 'success';
+  const expired = game.acceptance === 'expired';
+  const reason = reopened ? outcome?.reason : game.failureReason;
+  const snapshot = reopened ? outcome?.snapshot : game.finalSnapshot;
+  const ended = (reopened ? outcome?.endedAt : game.endedAt) ?? new Date().toISOString();
   const used = new Date(ended).getTime() - new Date(game.startedAt).getTime();
   const spent = totalSpent(game);
 
-  const conclusion = success ? '正式驗收成功：專案成功' : game.acceptance === 'expired' ? '專案失敗：未在期限內送交正式驗收。' : '正式驗收失敗：專案失敗';
+  const conclusion = success ? '正式驗收成功：專案成功' : expired ? '專案失敗：未在期限內送交正式驗收。' : '正式驗收失敗：專案失敗';
 
   return (
     <div className={`result ${success ? 'result-ok' : 'result-fail'}`}>
@@ -25,15 +33,23 @@ export default function ResultScreen() {
           <div>
             <div className="start-kicker">骨牌任務 · 結果</div>
             <h1>{conclusion}</h1>
-            {!success && game.acceptance === 'failed' && (
-              <p className="reason"><b>第一個失敗原因：</b>{game.failureReason}</p>
+            {!success && !expired && (
+              <p className="reason"><b>第一個失敗原因：</b>{reason}</p>
             )}
-            {game.acceptance === 'expired' && <p className="reason">時間到期時尚未送交正式驗收。</p>}
+            {expired && <p className="reason">時間到期時尚未送交正式驗收。</p>}
           </div>
           <div className="btn-col">
             <button className="btn btn-blue btn-xl" disabled={busy} onClick={async () => { setBusy(true); try { await generatePdf(game); } finally { setBusy(false); } }}>
               {busy ? '產生中…' : '下載驗收 PDF'}
             </button>
+            {reopened ? (
+              <button className="btn btn-yellow" onClick={() => setShowResult(false)}>回到工地</button>
+            ) : game.preAcceptanceBoard && !expired ? (
+              <button className="btn btn-yellow" disabled={remainingMs(game, nowMs) <= 0} onClick={restoreAfterAcceptance} title="回到施工畫面，骨牌站回驗收時的樣子；正式驗收不能再送">
+                恢復驗收時的配置，繼續修正
+                <small>{remainingMs(game, nowMs) <= 0 ? '時間已到期' : '不能再次正式驗收'}</small>
+              </button>
+            ) : null}
             <button className="btn btn-ghost" onClick={async () => { await copyLayoutToClipboard(game.board); setCopied(true); setTimeout(() => setCopied(false), 2500); }}>
               {copied ? '已複製配置' : '複製配置'}
             </button>
@@ -58,7 +74,7 @@ export default function ResultScreen() {
               <tbody>
                 <tr><th>小組名稱</th><td>{game.teamName}</td></tr>
                 <tr><th>遊戲開始</th><td>{fmtClock(game.startedAt)}</td></tr>
-                <tr><th>{game.acceptance === 'expired' ? '到期時間' : '結束時間'}</th><td>{fmtClock(ended)}</td></tr>
+                <tr><th>{expired ? '到期時間' : '結束時間'}</th><td>{fmtClock(ended)}</td></tr>
                 <tr><th>總使用時間</th><td>{fmtDuration(used)}</td></tr>
               </tbody>
             </table>
@@ -74,8 +90,8 @@ export default function ResultScreen() {
             </table>
           </section>
           <section>
-            <h3>{game.acceptance === 'expired' ? '時間到期時的施工圖' : '驗收前施工圖'}</h3>
-            {game.finalSnapshot ? <img className="snapshot" src={game.finalSnapshot} alt="施工圖快照" /> : <p className="muted">（沒有快照）</p>}
+            <h3>{expired ? '時間到期時的施工圖' : '驗收前施工圖'}</h3>
+            {snapshot ? <img className="snapshot" src={snapshot} alt="施工圖快照" /> : <p className="muted">（沒有快照）</p>}
           </section>
         </div>
 

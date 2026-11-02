@@ -56,6 +56,12 @@ export type GameState = {
   acceptance: AcceptanceStatus;
   failureReason?: string;
   finalSnapshot?: string;
+  /** the one formal acceptance has been used (students may restore the layout and keep working, but not re-submit) */
+  acceptanceUsed?: boolean;
+  /** outcome of the formal acceptance, kept so the result page can be reopened after restoring */
+  acceptanceOutcome?: { ok: boolean; reason?: string; endedAt: string; snapshot?: string };
+  /** standing layout at the moment of acceptance */
+  preAcceptanceBoard?: BoardPiece[];
   /** checklist from the most recent rehearsal */
   lastRehearsal?: { at: string; items: { label: string; ok: boolean; detail: string }[] };
   acceptanceRuns?: number;

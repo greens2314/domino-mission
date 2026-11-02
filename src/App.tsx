@@ -29,7 +29,8 @@ export default function App() {
   }, [tick, expire]);
 
   // The 3D canvas stays mounted for the whole session; start/result screens overlay it.
-  const finished = !!game && game.acceptance !== 'not-submitted' && !playback;
+  const showResult = useStore((s) => s.showResult);
+  const finished = !!game && (game.acceptance !== 'not-submitted' || showResult) && !playback;
   return (
     <>
       <div className="app" aria-hidden={!game || finished}>
