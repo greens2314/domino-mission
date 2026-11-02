@@ -5,7 +5,8 @@ export type BrickKind =
 
 export type PieceKind = 'domino' | BrickKind;
 
-export type Rotation = 0 | 90 | 180 | 270;
+/** degrees, counter-clockwise from +x; bricks use multiples of 90, dominoes multiples of 15 */
+export type Rotation = number;
 
 export type BoardPiece = {
   id: string;

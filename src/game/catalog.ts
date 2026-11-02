@@ -71,28 +71,30 @@ export function emptyInventory(): Record<PieceKind, number> {
 /** Footprint size after rotation. */
 export function footprint(kind: PieceKind, rotation: Rotation): { w: number; d: number } {
   const spec = PIECES[kind];
-  return rotation === 90 || rotation === 270 ? { w: spec.d, d: spec.w } : { w: spec.w, d: spec.d };
+  const quarter = Math.round(normalizeDeg(rotation) / 90) % 2;
+  return quarter === 1 ? { w: spec.d, d: spec.w } : { w: spec.w, d: spec.d };
+}
+
+export function normalizeDeg(deg: number): number {
+  return ((deg % 360) + 360) % 360;
 }
 
 /** Direction a domino falls toward, by rotation. */
 export function dominoDir(rotation: Rotation): { dx: number; dy: number } {
-  switch (rotation) {
-    case 0: return { dx: 1, dy: 0 };
-    case 90: return { dx: 0, dy: 1 };
-    case 180: return { dx: -1, dy: 0 };
-    case 270: return { dx: 0, dy: -1 };
-  }
+  const rad = (normalizeDeg(rotation) * Math.PI) / 180;
+  const dx = Math.cos(rad), dy = Math.sin(rad);
+  return { dx: Math.abs(dx) < 1e-9 ? 0 : dx, dy: Math.abs(dy) < 1e-9 ? 0 : dy };
 }
 
 export function dirLabel(rotation: Rotation): string {
-  switch (rotation) {
-    case 0: return '→ 向右';
-    case 90: return '↓ 向前（靠近自己）';
-    case 180: return '← 向左';
-    case 270: return '↑ 向後（遠離自己）';
-  }
+  const d = normalizeDeg(rotation);
+  const names: [number, string][] = [[0, '→ 向右'], [90, '↓ 向前（靠近自己）'], [180, '← 向左'], [270, '↑ 向後（遠離自己）']];
+  const near = names.find(([a]) => Math.abs(a - d) < 1 || Math.abs(a - d) > 359);
+  return near ? near[1] : `${d}°`;
 }
 
-export function nextRotation(r: Rotation): Rotation {
-  return ((r + 90) % 360) as Rotation;
+export const DOMINO_ROT_STEP = 15;
+
+export function nextRotation(r: Rotation, step = 90): Rotation {
+  return normalizeDeg(r + step);
 }

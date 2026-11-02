@@ -1,5 +1,5 @@
 import { CAR_HEIGHT, CAR_LENGTH, BOARD_W, LANE_YS, dominoDir, isBrick } from './catalog';
-import { buildOccupancy, hkey, key } from './board';
+import { buildOccupancy, dominoCenter, key, DOMINO_WIDE } from './board';
 import type { BoardPiece, SimulationResult } from './types';
 
 /**
@@ -47,22 +47,33 @@ export function simulate(board: BoardPiece[]): SimulationResult {
   return { carStopX, blocked, startDominoId: startIds[0], falls };
 }
 
+/** How far ahead (cells) a falling domino can reach; its height is 2. */
+export const REACH = 2.0;
+/** Everything this close ahead is hit together (fan-out through packed arrays). */
+const NEAR = 1.0;
+/** Lateral half-width of the sweep near the tile (neighbouring rows wobble over) ... */
+const SWEEP_NEAR = DOMINO_WIDE + 0.25;
+/** ... and further ahead only what is nearly straight in front. */
+const SWEEP_FAR = 0.85;
+
 /**
- * Topple the given dominoes at t = 0 and propagate the chain.
- * A falling domino (height 2) reaches:
- *  - straight ahead: the nearest standing domino within 2.0 cells
- *  - diagonally (one row to either side): dominoes within 1.0 cell ahead
- * A domino may climb at most one layer per step, but may drop any height (falling off the edge).
+ * Topple the given dominoes at t = 0 and propagate the chain by geometry:
+ * a falling domino sweeps the sector ahead of it; it topples the nearest standing
+ * domino within REACH, plus every standing domino within NEAR. A domino may climb
+ * at most one layer per step but may drop any height (falling off an edge).
  */
 export function propagate(board: BoardPiece[], startIds: string[]): SimulationResult['falls'] {
   const byId = new Map(board.map((p) => [p.id, p] as const));
-  const standing = new Map<string, BoardPiece[]>(); // half-cell key -> dominoes
+  // bucket standing dominoes by the integer cell of their centre
+  const buckets = new Map<string, BoardPiece[]>();
+  const bkey = (cx: number, cy: number) => `${Math.floor(cx)},${Math.floor(cy)}`;
   for (const p of board) {
     if (p.kind !== 'domino' || p.fallen) continue;
-    const k = hkey(p.x, p.y);
-    const list = standing.get(k) ?? [];
+    const c = dominoCenter(p.x, p.y);
+    const k = bkey(c.x, c.y);
+    const list = buckets.get(k) ?? [];
     list.push(p);
-    standing.set(k, list);
+    buckets.set(k, list);
   }
 
   const fallen = new Map<string, number>();
@@ -72,9 +83,6 @@ export function propagate(board: BoardPiece[], startIds: string[]): SimulationRe
   }
   const falls = frontier.map((id) => ({ id, t: 0 }));
 
-  const STEPS = [0.5, 1, 1.5, 2];
-  const PERP = [0, 0.5, -0.5, 1, -1];
-
   let t = 0;
   while (frontier.length) {
     t++;
@@ -82,23 +90,26 @@ export function propagate(board: BoardPiece[], startIds: string[]): SimulationRe
     for (const id of frontier) {
       const a = byId.get(id)!;
       const { dx, dy } = dominoDir(a.rotation);
-      const px = -dy, py = dx;
-      const targets: BoardPiece[] = [];
-      let straightHit = false;
-      for (const f of STEPS) {
-        for (const p of PERP) {
-          if (p !== 0 && f > 1) continue; // diagonal reach is 1 cell
-          if (p === 0 && straightHit) continue; // straight: only the nearest
-          const list = standing.get(hkey(a.x + dx * f + px * p, a.y + dy * f + py * p));
-          if (!list) continue;
-          for (const b of list) {
+      const ca = dominoCenter(a.x, a.y);
+      const candidates: { b: BoardPiece; f: number }[] = [];
+      for (let ox = -3; ox <= 3; ox++) {
+        for (let oy = -3; oy <= 3; oy++) {
+          for (const b of buckets.get(bkey(ca.x + ox, ca.y + oy)) ?? []) {
+            if (b.id === a.id || fallen.has(b.id)) continue;
             if (b.z - a.z > 1) continue;
-            targets.push(b);
-            if (p === 0) straightHit = true;
+            const cb = dominoCenter(b.x, b.y);
+            const vx = cb.x - ca.x, vy = cb.y - ca.y;
+            const f = vx * dx + vy * dy;          // forward distance
+            const s = Math.abs(-vx * dy + vy * dx); // lateral offset
+            if (f <= 0.05 || f > REACH) continue;
+            if (s > (f <= NEAR ? SWEEP_NEAR : SWEEP_FAR)) continue;
+            candidates.push({ b, f });
           }
         }
       }
-      for (const b of targets) {
+      candidates.sort((p, q) => p.f - q.f || p.b.id.localeCompare(q.b.id));
+      const hit = candidates.filter((c, i) => i === 0 || c.f <= NEAR);
+      for (const { b } of hit) {
         if (fallen.has(b.id)) continue;
         fallen.set(b.id, t);
         falls.push({ id: b.id, t });

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BoardBuilder, buildPassingBoard } from './fixtures';
-import { checkPlacement, dominoBox, boxesOverlap } from './board';
+import { checkPlacement, dominoCorners, polygonsOverlap } from './board';
 import { simulate, propagate } from './simulate';
 import {
-  detectGates, brickComponents, runAcceptance, validateGates, validatePillars,
+  detectGates, brickComponents, runAcceptance, validateGates, validatePillars, chainBends,
   validateStairsShape, validateDiamondShape, validateMaterialUse, findDiamond, countReversals,
 } from './rules';
 import { PIECES, PIECE_ORDER } from './catalog';
@@ -163,7 +163,7 @@ describe('half-cell dominoes', () => {
     expect(checkPlacement(b.pieces, 'domino', 5.5, 5, 0).ok).toBe(true);   // ahead by half a cell
     expect(checkPlacement(b.pieces, 'domino', 5, 5.5, 0).ok).toBe(false);  // beside, tiles overlap
     expect(checkPlacement(b.pieces, 'domino', 5, 6, 0).ok).toBe(true);     // beside on the next cell
-    expect(boxesOverlap(dominoBox(5, 5, 0), dominoBox(5.5, 5, 0))).toBe(false);
+    expect(polygonsOverlap(dominoCorners(5, 5, 0), dominoCorners(5.5, 5, 0))).toBe(false);
   });
   it('keeps bricks off cells touched by a half-positioned domino', () => {
     const b = new BoardBuilder();
@@ -202,5 +202,42 @@ describe('drops', () => {
     b.add('domino', 5, 5, 0, 0);
     b.step(6, 5, 2, 0);
     expect(propagate(b.pieces, [b.pieces[0].id])).toHaveLength(1);
+  });
+});
+
+describe('free-angle dominoes', () => {
+  it('a 15-degree-stepped curve propagates and counts as an S', () => {
+    const b = new BoardBuilder();
+    b.curve((t) => ({ x: t, y: 10 + 2.5 * Math.sin(((t - 5) / 12) * 2 * Math.PI) }), 5, 17, 0.75);
+    expect(b.pieces.length).toBeGreaterThan(12);
+    const falls = propagate(b.pieces, [b.pieces[0].id]);
+    expect(falls).toHaveLength(b.pieces.length);
+    const ordered = falls.map((f) => b.pieces.find((p) => p.id === f.id)!);
+    const bends = chainBends(ordered);
+    expect(bends.bends).toBeGreaterThanOrEqual(2);
+    expect(bends.left && bends.right).toBe(true);
+  });
+  it('rotated tiles that cross each other are rejected', () => {
+    const b = new BoardBuilder();
+    b.add('domino', 5, 5, 0, 45);
+    expect(checkPlacement(b.pieces, 'domino', 5, 5, 135).ok).toBe(false);
+    expect(checkPlacement(b.pieces, 'domino', 5.5, 5.5, 45).ok).toBe(true);
+  });
+});
+
+describe('placing under overhangs', () => {
+  it('a domino goes under a gate beam when the pointer is on the ground, on top when pointing at the beam', () => {
+    const b = new BoardBuilder();
+    b.gate(5); // beam at z=2 over y 10..15
+    expect(checkPlacement(b.pieces, 'domino', 5, 13, 90, undefined, 0)).toEqual({ ok: true, z: 0 });
+    expect(checkPlacement(b.pieces, 'domino', 5, 13, 90, undefined, 3)).toEqual({ ok: true, z: 3 });
+    expect(checkPlacement(b.pieces, 'domino', 5, 13, 90)).toEqual({ ok: true, z: 3 });
+  });
+  it('a brick can sit on the ground under a beam, and still stacks on the highest brick by default', () => {
+    const b = new BoardBuilder();
+    b.gate(5);
+    expect(checkPlacement(b.pieces, 'brick-1x1', 5, 13, 0, undefined, 0)).toEqual({ ok: true, z: 0 });
+    b.column(9, 9, 2);
+    expect(checkPlacement(b.pieces, 'brick-1x1', 9, 9, 0)).toEqual({ ok: true, z: 2 });
   });
 });

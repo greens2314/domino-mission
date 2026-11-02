@@ -1,4 +1,5 @@
 import type { BoardPiece, PieceKind, Rotation } from './types';
+import { checkPlacement } from './board';
 
 /** Small builder used by tests and the teacher's demo layout (?demo). */
 export class BoardBuilder {
@@ -34,6 +35,30 @@ export class BoardBuilder {
     this.add('domino', x, y, k, rotation);
   }
 
+  /**
+   * Dominoes along a smooth curve: points sampled every `spacing` cm of arc length,
+   * each tile pointing along the tangent (rotation snapped to 15°, position to 0.5 cm).
+   * Tiles that would overlap a previous one are skipped.
+   */
+  curve(fn: (t: number) => { x: number; y: number }, t0: number, t1: number, spacing = 0.75) {
+    const samples = 400;
+    const pts: { x: number; y: number }[] = [];
+    for (let i = 0; i <= samples; i++) pts.push(fn(t0 + ((t1 - t0) * i) / samples));
+    let acc = spacing;
+    for (let i = 1; i < pts.length; i++) {
+      const seg = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+      acc += seg;
+      if (acc < spacing) continue;
+      const look = pts[Math.min(i + 4, pts.length - 1)], back = pts[Math.max(i - 4, 0)];
+      const deg = (Math.atan2(look.y - back.y, look.x - back.x) * 180) / Math.PI;
+      const rotation = (((Math.round(deg / 15) * 15) % 360) + 360) % 360;
+      const x = Math.round((pts[i].x - 0.5) * 2) / 2, y = Math.round((pts[i].y - 0.5) * 2) / 2;
+      if (!checkPlacement(this.pieces, 'domino', x, y, rotation).ok) continue; // too close to the last tile: try the next sample
+      this.add('domino', x, y, 0, rotation);
+      acc = 0;
+    }
+  }
+
   /** filled diamond, rows along +x starting at x0, centred on y=c (rows 2/4/6/8/10/10/8/6/4/2) */
   diamond(x0: number, c: number, rotation: Rotation = 0) {
     const rows = [2, 4, 6, 8, 10, 10, 8, 6, 4, 2];
@@ -52,17 +77,12 @@ export function buildPassingBoard(): BoardPiece[] {
   // two gates across the lane, 11 cm apart
   b.gate(3);
   b.gate(14);
-  // two free-standing pillars (7 high) behind the gates, either side of the S path
-  b.column(22, 5, 7);
-  b.column(22, 21, 7);
-  // S path: forward along x with three bends in y (+y, −y, +y)
-  b.line(16, 13, 1, 0, 4, 0);      // (16..19,13) →   start domino is (16,13) in the lane
-  b.line(20, 13, 0, 1, 3, 90);     // (20,13..15) ↓ (+y, toward the viewer)
-  b.line(20, 16, 1, 0, 4, 0);      // (20..23,16) →
-  b.line(24, 16, 0, -1, 7, 270);   // (24,16..10) ↑ (−y)
-  b.line(24, 9, 1, 0, 3, 0);       // (24..26,9) →
-  b.line(27, 9, 0, 1, 3, 90);      // (27,9..11) ↓ (+y)
-  b.line(27, 12, 1, 0, 3, 0);      // (27..29,12) →
+  // two free-standing pillars (7 high) behind the gates; the S path runs between them
+  b.column(23, 7, 7);
+  b.column(23, 19, 7);
+  // S path: 1.25 sine periods from the lane (x=16, y≈14.5) to the foot of the stairs,
+  // ending in a trough at (29, 12) heading +x so the last tile faces stair 1
+  b.curve((t) => ({ x: t, y: 14.6 - 2.6 * Math.sin(((t - 16) / 10.4) * 2 * Math.PI) }), 16, 29.2, 0.75);
   // stairs: exactly 8 levels climbing along x at y=12
   for (let k = 1; k <= 8; k++) b.step(29 + k, 12, k, 0); // x 30..37
   // cliff: the top domino drops straight onto the diamond's first row

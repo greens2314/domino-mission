@@ -29,18 +29,17 @@ function SnapshotBridge() {
 /** Grid origin for a footprint so the hovered cell sits near its centre. */
 export function originFor(material: Material, rotation: Rotation, hx: number, hy: number) {
   if (material === 'domino') {
-    // half-cell steps along the fall direction, whole cells across it
-    const { dx } = dominoDir(rotation);
+    // half-cell steps on both axes; overlap is judged by the rotated tile outline
     const snapHalf = (v: number) => Math.round((v - 0.5) * 2) / 2;
-    return dx !== 0 ? { x: snapHalf(hx), y: Math.floor(hy) } : { x: Math.floor(hx), y: snapHalf(hy) };
+    return { x: snapHalf(hx), y: snapHalf(hy) };
   }
   const { w, d } = footprint(material, rotation);
   return { x: Math.floor(hx) - Math.floor((w - 1) / 2), y: Math.floor(hy) - Math.floor((d - 1) / 2) };
 }
 
-/** Pointer position on the board plane (fractional cells). */
+/** Pointer position on the board (fractional cells) plus the hit height. */
 function cellFromPoint(p: THREE.Vector3) {
-  return { x: p.x, y: p.z };
+  return { x: p.x, y: p.z, h: p.y };
 }
 function wholeCell(p: { x: number; y: number }) {
   return { x: Math.floor(p.x), y: Math.floor(p.y) };
@@ -169,15 +168,14 @@ function Brick({ piece, selected, dimmed, onDown, onMove }: PieceProps) {
 function Domino({ piece, selected, visuallyFallen, dimmed, onDown, onMove }: PieceProps) {
   const { dx, dy } = dominoDir(piece.rotation);
   const thickness = 0.36, width = 0.82;
-  const yaw = piece.rotation === 0 || piece.rotation === 180 ? 0 : Math.PI / 2;
-  // the group's pivot is the bottom-front edge; falling rotates around it.
-  const sign = dx !== 0 ? dx : dy;
-  const fallAngle = visuallyFallen ? sign * (Math.PI / 2 - 0.06) : 0;
+  // local +x is the fall direction; yaw turns it toward (dx, dy) on the board (board y → three z)
+  const yaw = -Math.atan2(dy, dx);
+  const fallAngle = visuallyFallen ? Math.PI / 2 - 0.06 : 0;
   const color = piece.fallen && !visuallyFallen ? '#f2f0e6' : '#f7f3e8';
   return (
     <group position={[piece.x + 0.5, piece.z, piece.y + 0.5]}>
-      <group rotation={[dy !== 0 ? fallAngle : 0, 0, dx !== 0 ? -fallAngle : 0]}>
-        <group rotation={[0, yaw, 0]}>
+      <group rotation={[0, yaw, 0]}>
+        <group rotation={[0, 0, -fallAngle]}>
           <mesh
             position={[0, DOMINO_HEIGHT / 2, 0]}
             castShadow
@@ -203,7 +201,7 @@ function Domino({ piece, selected, visuallyFallen, dimmed, onDown, onMove }: Pie
         </group>
       </group>
       {selected && !visuallyFallen && (
-        <mesh position={[dx * 0.9, 0.25, dy * 0.9]} rotation={[0, -Math.atan2(dy, dx), 0]} raycast={() => null}>
+        <mesh position={[dx * 0.9, 0.25, dy * 0.9]} rotation={[0, -Math.atan2(dy, dx), -Math.PI / 2]} raycast={() => null}>
           <coneGeometry args={[0.3, 0.9, 4]} />
           <meshBasicMaterial color="#ff5a1f" />
         </mesh>
@@ -249,12 +247,12 @@ function Ghost() {
     const p = game.board.find((b) => b.id === movingId);
     if (!p) return null;
     const o = originFor(p.kind, rotation, hover.x, hover.y);
-    const r = checkPlacement(game.board, p.kind, o.x, o.y, rotation, p.id);
+    const r = checkPlacement(game.board, p.kind, o.x, o.y, rotation, p.id, hover.h);
     return <FootprintBox kind={p.kind} rotation={rotation} x={o.x} y={o.y} z={r.ok ? r.z : 0} ok={r.ok} />;
   }
   if (tool !== 'place' || !material) return null;
   const o = originFor(material, rotation, hover.x, hover.y);
-  const r = checkPlacement(game.board, material, o.x, o.y, rotation);
+  const r = checkPlacement(game.board, material, o.x, o.y, rotation, undefined, hover.h);
   return <FootprintBox kind={material} rotation={rotation} x={o.x} y={o.y} z={r.ok ? r.z : 0} ok={r.ok} />;
 }
 
@@ -262,14 +260,15 @@ function FootprintBox({ kind, rotation, x, y, z, ok }: { kind: BoardPiece['kind'
   const { w, d } = footprint(kind, rotation);
   const h = isBrick(kind) ? 1 : DOMINO_HEIGHT;
   const { dx, dy } = dominoDir(rotation);
+  const isDomino = kind === 'domino';
   return (
-    <group position={[x + w / 2, z + h / 2, y + d / 2]}>
+    <group position={[x + w / 2, z + h / 2, y + d / 2]} rotation={[0, isDomino ? -Math.atan2(dy, dx) : 0, 0]}>
       <mesh raycast={() => null}>
-        <boxGeometry args={[w, h, d]} />
+        <boxGeometry args={isDomino ? [0.36, h, 0.82] : [w, h, d]} />
         <meshStandardMaterial color={ok ? '#2ecc71' : '#e63946'} transparent opacity={0.45} />
       </mesh>
       {kind === 'domino' && (
-        <mesh position={[dx * 0.9, -h / 2 + 0.2, dy * 0.9]} rotation={[0, -Math.atan2(dy, dx), 0]} raycast={() => null}>
+        <mesh position={[0.9, -h / 2 + 0.2, 0]} rotation={[0, 0, -Math.PI / 2]} raycast={() => null}>
           <coneGeometry args={[0.3, 0.9, 4]} />
           <meshBasicMaterial color="#ff5a1f" />
         </mesh>
@@ -290,33 +289,46 @@ function Ruler() {
   const [a, b] = pts;
   const ha = occ.top.get(key2(a.x, a.y)) ?? 0;
   const pa = new THREE.Vector3(a.x + 0.5, ha + 0.1, a.y + 0.5);
-  let line: THREE.Vector3[] = [pa];
-  let label = `高度 ${ha} cm`;
-  if (b) {
-    const hb = occ.top.get(key2(b.x, b.y)) ?? 0;
-    const pb = new THREE.Vector3(b.x + 0.5, hb + 0.1, b.y + 0.5);
-    line = [pa, pb];
-    const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
-    const dist = Math.hypot(dx, dy);
-    label = `距離 ${dist % 1 === 0 ? dist : dist.toFixed(1)} cm（橫 ${dx}，縱 ${dy}）；高度 ${ha} → ${hb} cm`;
+  if (!b) {
+    return (
+      <group>
+        <mesh position={pa.toArray()} raycast={() => null}>
+          <sphereGeometry args={[0.28, 12, 12]} />
+          <meshBasicMaterial color="#ff5a1f" />
+        </mesh>
+        <TextSprite text={`高度 ${ha} cm`} position={[pa.x, pa.y + 2.2, pa.z]} bg="#ff5a1f" fg="#ffffff" scale={0.9} />
+      </group>
+    );
   }
-  const mid = line.length === 2 ? line[0].clone().add(line[1]).multiplyScalar(0.5) : pa;
+  const hb = occ.top.get(key2(b.x, b.y)) ?? 0;
+  const pb = new THREE.Vector3(b.x + 0.5, hb + 0.1, b.y + 0.5);
+  const top = Math.max(ha, hb) + 0.1;
+  const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
+  const dist = Math.hypot(dx, dy);
+  const fmt = (v: number) => (v % 1 === 0 ? String(v) : v.toFixed(1));
+  const label = `水平距離 ${fmt(dist)} cm（橫 ${dx}，縱 ${dy}）${ha !== hb ? `；高度差 ${Math.abs(ha - hb)} cm` : `；高度 ${ha} cm`}`;
+  // horizontal measuring line drawn at the higher end, with a vertical drop to the lower end
+  const segs: THREE.Vector3[] = [
+    new THREE.Vector3(pa.x, top, pa.z), new THREE.Vector3(pb.x, top, pb.z),
+    new THREE.Vector3(pa.x, top, pa.z), pa,
+    new THREE.Vector3(pb.x, top, pb.z), pb,
+  ];
+  const arr = new Float32Array(segs.flatMap((v) => v.toArray()));
+  const mid = new THREE.Vector3((pa.x + pb.x) / 2, top, (pa.z + pb.z) / 2);
   return (
     <group>
-      {line.map((p, i) => (
+      {[pa, pb].map((p, i) => (
         <mesh key={i} position={p.toArray()} raycast={() => null}>
           <sphereGeometry args={[0.28, 12, 12]} />
           <meshBasicMaterial color="#ff5a1f" />
         </mesh>
       ))}
-      {line.length === 2 && (
-        <line>
-          <bufferGeometry>
-            <bufferAttribute attach="attributes-position" args={[new Float32Array([...line[0].toArray(), ...line[1].toArray()]), 3]} />
-          </bufferGeometry>
-          <lineBasicMaterial color="#ff5a1f" linewidth={2} />
-        </line>
-      )}
+      <lineSegments>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[arr, 3]} />
+        </bufferGeometry>
+        <lineBasicMaterial color="#ff5a1f" />
+      </lineSegments>
       <TextSprite text={label} position={[mid.x, mid.y + 2.2, mid.z]} bg="#ff5a1f" fg="#ffffff" scale={0.9} />
     </group>
   );
@@ -387,8 +399,8 @@ function World() {
     if (e.delta > 4) return; // it was a camera drag
     const c = cellFromPoint(e.point);
     if (tool === 'ruler') { addRulerPoint(wholeCell(c)); return; }
-    if (movingId) { const o = originFor(useStore.getState().game!.board.find((b) => b.id === movingId)!.kind, useStore.getState().rotation, c.x, c.y); placeAt(o.x, o.y); return; }
-    if (tool === 'place' && material) { const o = originFor(material, useStore.getState().rotation, c.x, c.y); placeAt(o.x, o.y); return; }
+    if (movingId) { const o = originFor(useStore.getState().game!.board.find((b) => b.id === movingId)!.kind, useStore.getState().rotation, c.x, c.y); placeAt(o.x, o.y, c.h); return; }
+    if (tool === 'place' && material) { const o = originFor(material, useStore.getState().rotation, c.x, c.y); placeAt(o.x, o.y, c.h); return; }
     selectPiece(null);
   };
 
@@ -400,14 +412,14 @@ function World() {
       // placing on top of an existing piece: treat like a plane click at that cell
       const c = cellFromPoint(e.point);
       const o = originFor(material, useStore.getState().rotation, c.x, c.y);
-      placeAt(o.x, o.y);
+      placeAt(o.x, o.y, c.h);
       return;
     }
     if (movingId) {
       const c = cellFromPoint(e.point);
       const p = useStore.getState().game!.board.find((b) => b.id === movingId)!;
       const o = originFor(p.kind, useStore.getState().rotation, c.x, c.y);
-      placeAt(o.x, o.y);
+      placeAt(o.x, o.y, c.h);
       return;
     }
     selectPiece(id);
@@ -433,7 +445,7 @@ function World() {
         const p = s.game?.board.find((b) => b.id === d.id);
         if (h && p) {
           const o = originFor(p.kind, s.rotation, h.x, h.y);
-          placeAt(o.x, o.y);
+          placeAt(o.x, o.y, h.h);
           if (useStore.getState().movingId === d.id) cancelMove();
         } else cancelMove();
       }
@@ -446,10 +458,10 @@ function World() {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') return;
       const s = useStore.getState();
-      if (e.key === 'r' || e.key === 'R') {
-        if (s.movingId || (s.tool === 'place' && s.material)) rotateGhost();
-        else if (s.selectedId) s.rotateSelected();
-      }
+      const ghostActive = s.movingId || (s.tool === 'place' && s.material);
+      if (e.key === 'r' || e.key === 'R') { if (ghostActive) rotateGhost(90); else if (s.selectedId) s.rotateSelected(90); }
+      if (e.key === 'q' || e.key === 'Q') { if (ghostActive) rotateGhost(15); else if (s.selectedId) s.rotateSelected(15); }
+      if (e.key === 'e' || e.key === 'E') { if (ghostActive) rotateGhost(-15); else if (s.selectedId) s.rotateSelected(-15); }
       if (e.key === 'Escape') { if (s.movingId) cancelMove(); else { s.pickMaterial(null); s.selectPiece(null); s.clearRuler(); } }
       if (e.key === 'Delete' && s.selectedId && !s.movingId) s.requestRemove(s.selectedId);
     };
@@ -510,6 +522,7 @@ function World() {
         maxPolarAngle={Math.PI / 2 - 0.08}
         minDistance={MIN_DISTANCE}
         maxDistance={MAX_DISTANCE}
+        zoomSpeed={0.35}
         enablePan
         panSpeed={0.8}
         makeDefault

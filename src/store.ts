@@ -37,7 +37,7 @@ export type Store = {
   rotation: Rotation;
   selectedId: string | null;
   movingId: string | null;
-  hover: Point | null;
+  hover: (Point & { h?: number }) | null;
   rulerPoints: Point[];
   message: { text: string; at: number } | null;
   modal: ModalKind | null;
@@ -61,13 +61,13 @@ export type Store = {
   // ---- board ----
   setTool: (t: Tool) => void;
   pickMaterial: (m: Material | null) => void;
-  rotateGhost: () => void;
-  setHover: (p: Point | null) => void;
-  placeAt: (x: number, y: number) => void;
+  rotateGhost: (step?: number) => void;
+  rotateSelected: (step?: number) => void;
+  setHover: (p: (Point & { h?: number }) | null) => void;
+  placeAt: (x: number, y: number, preferZ?: number) => void;
   selectPiece: (id: string | null) => void;
   beginMove: (id: string) => void;
   cancelMove: () => void;
-  rotateSelected: () => void;
   removeSelected: () => void;
   restandSelected: () => void;
   placeCarAtStart: () => void;
@@ -209,10 +209,15 @@ export const useStore = create<Store>()(
 
       setTool: (t) => set({ tool: t, material: t === 'place' ? get().material : null, movingId: null, rulerPoints: [] }),
       pickMaterial: (m) => set({ material: m, tool: m ? 'place' : 'select', selectedId: null, movingId: null, rulerPoints: [] }),
-      rotateGhost: () => set({ rotation: nextRotation(get().rotation) }),
+      rotateGhost: (step = 90) => {
+        const s = get();
+        const kind = s.movingId ? s.game?.board.find((b) => b.id === s.movingId)?.kind : s.material;
+        const st = kind === 'domino' ? step : 90 * Math.sign(step || 90);
+        set({ rotation: nextRotation(s.rotation, st) });
+      },
       setHover: (p) => set({ hover: p }),
 
-      placeAt: (x, y) => {
+      placeAt: (x, y, preferZ) => {
         const s = get();
         const g = s.game;
         if (!isRunning(g) || s.playback) return;
@@ -222,7 +227,7 @@ export const useStore = create<Store>()(
         if (s.movingId) {
           const p = g.board.find((b) => b.id === s.movingId);
           if (!p) { set({ movingId: null }); return; }
-          const r = checkPlacement(g.board, p.kind, x, y, s.rotation, p.id);
+          const r = checkPlacement(g.board, p.kind, x, y, s.rotation, p.id, preferZ);
           if (!r.ok) { s.flash(r.reason); return; }
           const board = g.board.map((b) => (b.id === p.id ? { ...b, x, y, z: r.z, rotation: s.rotation, fallen: false } : b));
           set({ game: { ...g, board }, movingId: null, selectedId: p.id, tool: 'select' });
@@ -233,7 +238,7 @@ export const useStore = create<Store>()(
 
         const kind = s.material;
         if ((g.inventory[kind] ?? 0) <= 0) { s.flash(`庫存沒有${PIECES[kind].label}，請先採購。`); return; }
-        const r = checkPlacement(g.board, kind, x, y, s.rotation);
+        const r = checkPlacement(g.board, kind, x, y, s.rotation, undefined, preferZ);
         if (!r.ok) { s.flash(r.reason); return; }
         const piece: BoardPiece = { id: newId(), kind, x, y, z: r.z, rotation: s.rotation };
         const inv = { ...g.inventory, [kind]: g.inventory[kind] - 1 };
@@ -259,13 +264,19 @@ export const useStore = create<Store>()(
       },
       cancelMove: () => set({ movingId: null, tool: 'select' }),
 
-      rotateSelected: () => {
+      rotateSelected: (step = 90) => {
         const s = get(); const g = s.game;
         if (!isRunning(g) || !s.selectedId) return;
         const p = g.board.find((b) => b.id === s.selectedId);
         if (!p) return;
-        const rot = nextRotation(p.rotation);
-        if (p.kind === 'domino' || PIECES[p.kind].w === PIECES[p.kind].d) {
+        const rot = nextRotation(p.rotation, p.kind === 'domino' ? step : 90 * Math.sign(step || 90));
+        if (p.kind === 'domino') {
+          const r = checkPlacement(g.board, 'domino', p.x, p.y, rot, p.id);
+          if (!r.ok) { s.flash('轉到這個角度會碰到旁邊的骨牌。'); return; }
+          set({ game: { ...g, board: g.board.map((b) => (b.id === p.id ? { ...b, rotation: rot } : b)) } });
+          return;
+        }
+        if (PIECES[p.kind].w === PIECES[p.kind].d) {
           set({ game: { ...g, board: g.board.map((b) => (b.id === p.id ? { ...b, rotation: rot } : b)) } });
           return;
         }

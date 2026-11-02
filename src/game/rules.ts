@@ -208,15 +208,35 @@ export function validateCarRoute(board: BoardPiece[]): RouteCheck {
   return { sim, reason: null };
 }
 
-/** Count how many times the chain reverses direction along an axis. */
-export function countReversals(dominoesInOrder: BoardPiece[]): number {
-  let lastX: number | null = null, lastY: number | null = null, rev = 0;
-  for (const d of dominoesInOrder) {
-    const { dx, dy } = dominoDir(d.rotation);
-    if (dx !== 0) { if (lastX !== null && lastX !== dx) rev++; lastX = dx; }
-    if (dy !== 0) { if (lastY !== null && lastY !== dy) rev++; lastY = dy; }
+/**
+ * Bends of the chain: consecutive headings are compared and same-signed turns are
+ * accumulated into runs; a run of at least 60° counts as one bend. Returns the number
+ * of bends and whether both turning directions occur (an S needs one of each).
+ */
+export function chainBends(dominoesInOrder: BoardPiece[]): { bends: number; left: boolean; right: boolean } {
+  const headings = dominoesInOrder.map((d) => { const { dx, dy } = dominoDir(d.rotation); return Math.atan2(dy, dx); });
+  let runSign = 0, runTotal = 0, bends = 0, left = false, right = false;
+  const close = () => {
+    if (Math.abs(runTotal) >= Math.PI / 3) { bends++; if (runTotal > 0) left = true; else right = true; }
+    runSign = 0; runTotal = 0;
+  };
+  for (let i = 1; i < headings.length; i++) {
+    let turn = headings[i] - headings[i - 1];
+    while (turn > Math.PI) turn -= 2 * Math.PI;
+    while (turn < -Math.PI) turn += 2 * Math.PI;
+    if (Math.abs(turn) < 0.05) continue;
+    const sign = Math.sign(turn);
+    if (runSign !== 0 && sign !== runSign) close();
+    runSign = sign;
+    runTotal += turn;
   }
-  return rev;
+  close();
+  return { bends, left, right };
+}
+
+/** Number of ≥60° bends along the chain (kept for tests / diagnostics). */
+export function countReversals(dominoesInOrder: BoardPiece[]): number {
+  return chainBends(dominoesInOrder).bends;
 }
 
 export type ChainCheck = { reason: string | null };
@@ -240,7 +260,8 @@ export function validateChain(board: BoardPiece[], sim: SimulationResult): strin
     .map((f) => byId.get(f.id)!)
     .filter((p) => p.z === 0 && !diamond.has(p.id));
   if (sPath.length < 3) return '起始骨牌之後沒有形成 S 型路徑。';
-  if (countReversals(sPath) < 2) return 'S 型路徑不成立：骨牌傳遞缺少至少兩次反向彎折。';
+  const bends = chainBends(sPath);
+  if (bends.bends < 2 || !bends.left || !bends.right) return 'S 型路徑不成立：骨牌傳遞缺少至少兩次反向彎折。';
 
   if (stairs.some((p) => !fallTime.has(p.id))) return '骨牌階梯未全部倒下：連鎖在階梯中斷。';
 
