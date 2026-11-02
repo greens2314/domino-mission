@@ -1,32 +1,41 @@
-# React + TypeScript + Vite
+# 骨牌任務（Domino Mission）
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+瀏覽器單頁 3D 專案管理體驗遊戲。學生小組在固定預算、有限採購次數與 60 分鐘倒數下，規畫、採買、搭建、向客戶釐清需求、取得測試小車、演練，並送交唯一一次的正式驗收。規格見 `docs/骨牌任務遊戲開發規格書.md`（v1.1）。
 
-Currently, two official plugins are available:
+- 線上版：https://greens2314.github.io/domino-mission/
+- 技術：React 19 + TypeScript + Vite、React Three Fiber（Three.js）、zustand（localStorage 持久化）、jsPDF、Vitest
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 教師操作備忘
 
-## React Compiler
+| 事項 | 做法 |
+| --- | --- |
+| 開始 | 每組一台筆電開啟網址，輸入小組名稱，教師按「開始專案」即啟動 60 分鐘倒數 |
+| 測試小車授權 | 學生向教師取得；教師在右側「客戶（教師）」輸入授權碼 `car666` |
+| 需求釐清 | 最多 3 次，口頭進行；系統不記錄 |
+| 示範配置 | 網址加 `?demo`（例如 `…/domino-mission/?demo`）再開始，會載入一組可通過驗收的完整配置，供教師示範驗收動畫；**不要給學生** |
+| 重玩 | 結果頁最下方「開始新的專案（清除這台電腦的紀錄）」；進度存在瀏覽器 localStorage，重新整理不會遺失 |
+| 繳交 | 結果頁「下載驗收 PDF」，學生自行上傳到課程系統 |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 內部規則（不對學生揭露）
 
-## Expanding the Oxlint configuration
+- 施工板 48 × 28 格，1 格＝1 cm，每塊積木高 1 cm，骨牌高 2 cm。
+- 小車固定車道 y＝12–14 三格，自左側起點往右直行；小車 3 寬 × 4 長 × 2 高。
+- 門：獨立積木結構，橫梁跨越整條車道且離地 ≥ 2 cm（小車可過），兩側落地；兩門中心距 ≥ 10 cm。
+- 柱子：門後的獨立積木結構，高度 ≥ 7 cm，至少 2 根。
+- 骨牌倒下可觸發：正前方 1 格（含斜前方兩格）且高差 ≤ 1 層；正前方空一格時可觸發 2 格外同層或低一層的骨牌。
+- S 型路徑：起始骨牌後、階梯前的地面骨牌，沿軸方向至少反向 2 次。
+- 階梯：架高骨牌須恰好含第 1–8 層，不得超過 8 層。
+- 鑽石陣：地面骨牌符合 2/4/6/8/10/10/8/6/4/2 模板（橫向或縱向皆可），共 60 枚。
+- 驗收順序：門 → 柱子 → 材料 → 階梯形狀 → 鑽石陣形狀 → 小車路線 → 連鎖（S → 階梯 → 鑽石陣）；第一個不符即為失敗原因。演練只播放結果不回報原因。
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## 開發
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev        # http://localhost:5173/domino-mission/
+npm test           # 規則引擎單元測試
+npm run build
+npm run deploy     # 推到 gh-pages 分支（GitHub Pages）
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+程式結構：`src/game/`（規則引擎：`board.ts` 放置、`simulate.ts` 小車與連鎖、`rules.ts` 驗收、`shop.ts` 價目、`fixtures.ts` 測試配置）、`src/store.ts`（遊戲狀態）、`src/components/`（UI 與 3D 場景）、`src/pdf.ts`（驗收 PDF）。

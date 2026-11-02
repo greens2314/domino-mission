@@ -1,6 +1,6 @@
 import { PIECES } from '../game/catalog';
 import { useStore } from '../store';
-import { snapshotRef } from './Scene';
+import { captureSnapshot } from '../snapshot';
 
 export default function Modals() {
   const modal = useStore((s) => s.modal);
@@ -45,9 +45,7 @@ export default function Modals() {
           <button
             className="btn btn-blue"
             onClick={() => {
-              let snap = '';
-              try { snap = snapshotRef.capture?.() ?? ''; } catch { snap = ''; }
-              submitAcceptance(snap);
+              submitAcceptance(captureSnapshot());
             }}
           >
             確認送交正式驗收

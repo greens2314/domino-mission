@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import Scene, { snapshotRef } from './components/Scene';
+import Scene from './components/Scene';
+import { captureSnapshot } from './snapshot';
 import StartScreen from './components/StartScreen';
 import TopBar from './components/TopBar';
 import LeftPanel from './components/LeftPanel';
@@ -20,9 +21,7 @@ export default function App() {
       tick();
       const g = useStore.getState().game;
       if (isRunning(g) && remainingMs(g) <= 0 && !useStore.getState().playback) {
-        let snap: string | undefined;
-        try { snap = snapshotRef.capture?.() ?? undefined; } catch { snap = undefined; }
-        expire(snap);
+        expire(captureSnapshot() || undefined);
       }
     }, 500);
     return () => clearInterval(id);

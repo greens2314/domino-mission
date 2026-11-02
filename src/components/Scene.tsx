@@ -8,29 +8,16 @@ import {
 import { checkPlacement, footprintCells, buildOccupancy, key2 } from '../game/board';
 import type { BoardPiece, Rotation } from '../game/types';
 import { playbackState, useStore, type Material } from '../store';
+import { registerThree } from '../snapshot';
 
 /* ------------------------------------------------------------------ */
-/* Snapshot registry: the result page / PDF grabs the canvas via this.  */
+/* Snapshot bridge: registers renderer handles for src/snapshot.ts.     */
 /* ------------------------------------------------------------------ */
-export const snapshotRef: { capture: (() => string) | null } = { capture: null };
-if (import.meta.env.DEV) (window as unknown as { __snap: typeof snapshotRef }).__snap = snapshotRef;
-
 function SnapshotBridge() {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera);
-  useEffect(() => {
-    snapshotRef.capture = () => {
-      gl.render(scene, camera);
-      const src = gl.domElement;
-      const w = 960, h = Math.round((src.height / src.width) * 960);
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      c.getContext('2d')!.drawImage(src, 0, 0, w, h);
-      return c.toDataURL('image/jpeg', 0.85);
-    };
-    return () => { snapshotRef.capture = null; };
-  }, [gl, scene, camera]);
+  useEffect(() => { registerThree({ gl, scene, camera }); }, [gl, scene, camera]);
   return null;
 }
 
@@ -523,6 +510,7 @@ export default function Scene() {
       dpr={[1, 1.5]}
       gl={{ preserveDrawingBuffer: true, antialias: true }}
       camera={{ position: [BOARD_W / 2, 30, BOARD_D / 2 + 36], fov: 40, near: 0.5, far: 400 }}
+      onCreated={(state) => registerThree({ gl: state.gl, scene: state.scene, camera: state.camera })}
       onPointerMissed={() => { /* handled by plane */ }}
     >
       <color attach="background" args={['#172a46']} />
