@@ -39,7 +39,7 @@ function Brief() {
       <table className="tbl">
         <tbody>
           <tr><th>門</th><td>建造 2 個門；兩門之間距離須至少 10 cm。</td></tr>
-          <tr><th>柱子</th><td>建造 2 根柱子；每根高度須大於 6 cm。</td></tr>
+          <tr><th>柱子</th><td>建造 2 根柱子；每根高度至少 6 cm。</td></tr>
           <tr><th>S 型路徑</th><td>排出可連鎖倒下的 S 型骨牌路徑。</td></tr>
           <tr><th>骨牌階梯</th><td>建造精確 8 層的骨牌階梯；可中空，不要求實心。</td></tr>
           <tr><th>鑽石陣</th><td>排出完整、填滿的 10 × 10 菱形骨牌陣。</td></tr>

@@ -59,6 +59,9 @@ export function brickComponents(board: BoardPiece[]): Component[] {
   return [...groups.values()];
 }
 
+/** Pillars must be at least this tall (cm). */
+export const PILLAR_MIN_HEIGHT = 6;
+
 export type Gate = { component: Component; centerX: number; minX: number; maxX: number };
 
 /**
@@ -101,7 +104,7 @@ export function detectPillars(board: BoardPiece[]): Component[] {
   const gates = detectGates(comps);
   const gateComps = new Set(gates.map((g) => g.component));
   const lastGateX = gates.length ? Math.max(...gates.map((g) => g.maxX)) : -1;
-  return comps.filter((c) => !gateComps.has(c) && c.minX > lastGateX && c.maxZ + 1 >= 7);
+  return comps.filter((c) => !gateComps.has(c) && c.minX > lastGateX && c.maxZ + 1 >= PILLAR_MIN_HEIGHT);
 }
 
 export function validatePillars(board: BoardPiece[]): string | null {
@@ -110,13 +113,24 @@ export function validatePillars(board: BoardPiece[]): string | null {
   const gateComps = new Set(gates.map((g) => g.component));
   const lastGateX = gates.length ? Math.max(...gates.map((g) => g.maxX)) : -1;
   const others = comps.filter((c) => !gateComps.has(c));
-  const tallEnough = others.filter((c) => c.maxZ + 1 >= 7);
-  const behind = tallEnough.filter((c) => c.minX > lastGateX);
-  if (behind.length < 2) {
-    if (tallEnough.length >= 2) return '柱子未位於兩門之後。';
-    return `門後沒有 2 根高度大於 6 cm 的獨立積木柱子（目前符合：${behind.length} 根）。`;
-  }
-  return null;
+  const qualifies = (c: Component) => c.maxZ + 1 >= PILLAR_MIN_HEIGHT && c.minX > lastGateX;
+  const ok = others.filter(qualifies);
+  if (ok.length >= 2) return null;
+
+  // explain what each other structure is missing, tallest first
+  const notes = others
+    .filter((c) => !qualifies(c))
+    .sort((p, q) => q.maxZ - p.maxZ)
+    .slice(0, 4)
+    .map((c) => {
+      const h = c.maxZ + 1;
+      const problems: string[] = [];
+      if (h < PILLAR_MIN_HEIGHT) problems.push(`高 ${h} cm，未達 ${PILLAR_MIN_HEIGHT} cm`);
+      if (c.minX <= lastGateX) problems.push('不在兩門之後');
+      return `高 ${h} cm 的積木結構：${problems.join('、')}`;
+    });
+  const gateNote = others.length < 2 && comps.length - others.length > 2 ? '；有積木結構與門相連，被視為門的一部分' : '';
+  return `門後沒有 2 根高度至少 ${PILLAR_MIN_HEIGHT} cm 的獨立積木柱子（目前符合：${ok.length} 根）。${notes.length ? notes.join('；') + '。' : ''}${gateNote}`;
 }
 
 export function validateMaterialUse(board: BoardPiece[]): string | null {

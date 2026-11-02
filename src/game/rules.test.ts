@@ -57,9 +57,9 @@ describe('gates and pillars', () => {
     b.column(2, 11, 1); b.column(2, 15, 1); b.add('brick-1x6', 2, 10, 1, 90);
     expect(detectGates(brickComponents(b.pieces))).toHaveLength(0);
   });
-  it('requires pillars of height >= 7 behind the gates', () => {
+  it('requires pillars of height >= 6 behind the gates', () => {
     const b = new BoardBuilder();
-    b.gate(2); b.gate(12); b.column(14, 2, 6); b.column(14, 24, 7);
+    b.gate(2); b.gate(12); b.column(14, 2, 5); b.column(14, 24, 6);
     expect(validatePillars(b.pieces)).toMatch(/柱子/);
   });
   it('flags bricks supported by dominoes', () => {
