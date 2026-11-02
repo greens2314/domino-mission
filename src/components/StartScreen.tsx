@@ -19,9 +19,6 @@ export default function StartScreen() {
         <ul className="start-rules">
           <li>起始預算 <b>{START_BUDGET} 點</b>，初始庫存免費骨牌 1 枚。</li>
           <li>前 3 次採購不加費；第 4 次起每張訂單加收 50 點行政費。付款後不可退款。</li>
-          <li>測試小車須向客戶（教師）取得授權。</li>
-          <li>正式驗收<b>僅 1 次</b>；時間到未送驗即為專案失敗。</li>
-          <li>成功判準唯一：在時間內送交正式驗收，且一次成功。沒有分數與排名。</li>
         </ul>
         <label className="field">
           <span>小組名稱</span>
@@ -35,7 +32,7 @@ export default function StartScreen() {
           />
         </label>
         <button className="btn btn-blue btn-xl" disabled={!ok} onClick={start}>
-          開始專案（由教師按下，啟動 {GAME_MINUTES} 分鐘倒數）
+          遊戲開始
         </button>
         <p className="start-note">按下後立即記錄開始時間並啟動倒數；請在教師說明與起始規畫結束後再按。</p>
       </div>

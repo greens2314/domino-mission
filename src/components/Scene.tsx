@@ -27,7 +27,6 @@ function SnapshotBridge() {
 
 /** Grid origin for a footprint so the hovered cell sits near its centre. */
 export function originFor(material: Material, rotation: Rotation, hx: number, hy: number) {
-  if (material === 'car') return { x: hx - Math.floor(CAR_LENGTH / 2), y: hy - Math.floor(CAR_WIDTH / 2) };
   const { w, d } = footprint(material, rotation);
   return { x: hx - Math.floor((w - 1) / 2), y: hy - Math.floor((d - 1) / 2) };
 }
@@ -142,6 +141,7 @@ function Brick({ piece, selected, dimmed, onDown, onMove }: PieceProps) {
         receiveShadow
         onPointerDown={(e) => onDown(e, piece.id)}
         onPointerMove={onMove}
+        onClick={(e) => e.stopPropagation()}
       >
         <meshStandardMaterial color={color} roughness={0.35} metalness={0.05} transparent={dimmed} opacity={dimmed ? 0.55 : 1} />
         {selected && <Edges color="#ffffff" scale={1.02} />}
@@ -173,6 +173,7 @@ function Domino({ piece, selected, visuallyFallen, dimmed, onDown, onMove }: Pie
             castShadow
             onPointerDown={(e) => onDown(e, piece.id)}
             onPointerMove={onMove}
+            onClick={(e) => e.stopPropagation()}
           >
             <boxGeometry args={[thickness, DOMINO_HEIGHT, width]} />
             <meshStandardMaterial color={color} roughness={0.4} transparent={dimmed} opacity={dimmed ? 0.55 : 1} />
@@ -201,8 +202,8 @@ function Domino({ piece, selected, visuallyFallen, dimmed, onDown, onMove }: Pie
   );
 }
 
-function Car({ x, y, ghost = false }: { x: number; y: number; ghost?: boolean }) {
-  const mat = ghost ? { transparent: true, opacity: 0.45 } : {};
+function Car({ x, y }: { x: number; y: number }) {
+  const mat = {};
   return (
     <group position={[x + CAR_LENGTH / 2, 0, y + CAR_WIDTH / 2]}>
       <mesh position={[0, 0.9, 0]} castShadow>
@@ -243,7 +244,6 @@ function Ghost() {
   }
   if (tool !== 'place' || !material) return null;
   const o = originFor(material, rotation, hover.x, hover.y);
-  if (material === 'car') return <Car x={o.x} y={o.y} ghost />;
   const r = checkPlacement(game.board, material, o.x, o.y, rotation);
   return <FootprintBox kind={material} rotation={rotation} x={o.x} y={o.y} z={r.ok ? r.z : 0} ok={r.ok} />;
 }

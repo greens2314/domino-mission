@@ -1,4 +1,4 @@
-import { START_BUDGET, GAME_MINUTES } from '../game/catalog';
+import { START_BUDGET, GAME_MINUTES, FREE_ORDERS } from '../game/catalog';
 import { remainingMs, totalSpent, useStore } from '../store';
 
 export function fmtClock(iso: string | number) {
@@ -49,8 +49,8 @@ export default function TopBar() {
         <div className="bar"><div className="bar-fill bar-budget" style={{ width: `${pctBudget}%` }} /></div>
       </div>
       <div className="stat">
-        <span className="stat-label">採購次數</span>
-        <span className="stat-value">{game.orders.length} 次</span>
+        <span className="stat-label">剩餘採購機會</span>
+        <span className="stat-value">{Math.max(0, FREE_ORDERS - game.orders.length)} 次</span>
       </div>
     </header>
   );

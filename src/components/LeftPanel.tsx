@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react';
-import { EMERGENCY_FEE, FREE_ORDERS, PIECES, PIECE_ORDER, MAX_CLARIFICATIONS } from '../game/catalog';
+import { EMERGENCY_FEE, FREE_ORDERS, PIECES, PIECE_ORDER } from '../game/catalog';
 import { buildOrder, type CartItem } from '../game/shop';
 import type { PackageKind, PieceKind } from '../game/types';
 import { useStore } from '../store';
-import { fmtClock } from './TopBar';
 
-type Tab = 'brief' | 'shop' | 'inventory' | 'tools' | 'orders';
+type Tab = 'brief' | 'shop' | 'inventory' | 'tools';
 
 export default function LeftPanel() {
   const [tab, setTab] = useState<Tab>('brief');
@@ -14,7 +13,6 @@ export default function LeftPanel() {
     { id: 'shop', label: '商店' },
     { id: 'inventory', label: '庫存' },
     { id: 'tools', label: '工具' },
-    { id: 'orders', label: '採購紀錄' },
   ];
   return (
     <aside className="panel panel-left">
@@ -28,7 +26,6 @@ export default function LeftPanel() {
         {tab === 'shop' && <Shop />}
         {tab === 'inventory' && <Inventory />}
         {tab === 'tools' && <Tools />}
-        {tab === 'orders' && <Orders />}
       </div>
     </aside>
   );
@@ -49,23 +46,6 @@ function Brief() {
           <tr><th>最終效果</th><td>小車通過兩門、碰倒指定起始骨牌；連鎖反應需依序完成 S 路徑、8 層階梯與整個鑽石陣。</td></tr>
         </tbody>
       </table>
-      <h4>材料使用限制</h4>
-      <ul>
-        <li>門與柱子：只能使用積木，不可用骨牌支撐或混搭。</li>
-        <li>骨牌：只能用於連鎖反應，不可拿來建門或柱子。</li>
-        <li>積木尺寸可以混用於同一座門或同一根柱子。</li>
-        <li>鑽石陣為「填滿」要求；不得以空心輪廓替代。</li>
-      </ul>
-      <h4>客戶互動</h4>
-      <ul>
-        <li>整場最多 <b>{MAX_CLARIFICATIONS} 次</b>正式需求釐清，由小組自行形成問題，直接向客戶（教師）口頭詢問。</li>
-        <li>測試小車須主動向客戶取得授權；授權碼由客戶輸入在右側面板。</li>
-      </ul>
-      <h4>演練與驗收</h4>
-      <ul>
-        <li>全程演練次數不限，但被觸發的骨牌會倒下，須由小組逐一扶正。</li>
-        <li>正式驗收僅 1 次，送驗後立即鎖定施工板。</li>
-      </ul>
     </div>
   );
 }
@@ -98,7 +78,7 @@ function Shop() {
   return (
     <div className="shop">
       <h3>商店</h3>
-      <p className="muted">第 {nextOrderNo} 張訂單{nextOrderNo > FREE_ORDERS ? `：將加收 ${EMERGENCY_FEE} 點緊急採購／行政費` : `（前 ${FREE_ORDERS} 次不加費）`}。付款後不可退款。</p>
+      <p className="muted">第 {nextOrderNo} 張訂單{nextOrderNo > FREE_ORDERS ? `：採購機會已用完，將加收 ${EMERGENCY_FEE} 點緊急採購／行政費` : `（剩餘採購機會 ${FREE_ORDERS - nextOrderNo + 1} 次）`}。付款後不可退款。</p>
       <table className="tbl shop-tbl">
         <thead>
           <tr><th>材料</th><th>單買</th><th>數量</th><th>10 入</th><th>數量</th></tr>
@@ -186,11 +166,9 @@ function Inventory() {
         <div className="car-box">
           <h4>測試小車（已授權）</h4>
           {game.carOnBoard ? (
-            <button className="btn btn-ghost" onClick={() => useStore.getState().removeCar()}>移開小車</button>
+            <button className="btn btn-ghost" onClick={() => useStore.getState().removeCar()}>收回小車</button>
           ) : (
-            <button className={`btn btn-ghost ${tool === 'place' && material === 'car' ? 'active' : ''}`} onClick={() => pickMaterial(material === 'car' ? null : 'car')}>
-              放置小車到工地（目測尺寸）
-            </button>
+            <button className="btn btn-ghost" onClick={() => useStore.getState().placeCarAtStart()}>把小車放到起點</button>
           )}
         </div>
       )}
@@ -227,37 +205,6 @@ function Tools() {
         <li><kbd>R</kbd> 旋轉 90°、<kbd>Delete</kbd> 收回材料、<kbd>Esc</kbd> 取消。</li>
         <li>骨牌的橘色箭頭表示倒下方向。</li>
       </ul>
-    </div>
-  );
-}
-
-function Orders() {
-  const game = useStore((s) => s.game)!;
-  if (!game.orders.length) return <div><h3>採購紀錄</h3><p className="muted">尚無採購。</p></div>;
-  return (
-    <div className="orders">
-      <h3>採購紀錄</h3>
-      {game.orders.map((o) => (
-        <div key={o.orderNo} className="order">
-          <div className="order-head">
-            <b>第 {o.orderNo} 次採購</b>
-            <span>{fmtClock(o.at)}</span>
-            <span className="order-total">{o.total} 點</span>
-          </div>
-          <table className="tbl small">
-            <tbody>
-              {o.lines.map((l, i) => (
-                <tr key={i}>
-                  <td>{PIECES[l.kind].label}</td>
-                  <td>{l.package === 'single' ? '單買' : '10 入'} × {l.quantity}</td>
-                  <td className="num">{l.subtotal}</td>
-                </tr>
-              ))}
-              {o.emergencyFee > 0 && <tr><td colSpan={2}>緊急採購／行政費</td><td className="num">{o.emergencyFee}</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      ))}
     </div>
   );
 }

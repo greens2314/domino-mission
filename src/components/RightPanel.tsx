@@ -13,25 +13,9 @@ export default function RightPanel() {
   const { openModal, beginMove, rotateSelected, restandSelected, cancelMove, rotateGhost, pickMaterial } = useStore.getState();
   const selected = selectedId ? game.board.find((b) => b.id === selectedId) : undefined;
 
-  const steps = [
-    { label: '規畫', done: true },
-    { label: '採購', done: game.orders.length > 0 },
-    { label: '施工', done: game.board.length > 0 },
-    { label: '取得小車', done: game.carUnlocked },
-    { label: '演練', done: game.rehearsals > 0 },
-    { label: '正式驗收', done: false },
-  ];
-  const currentIdx = steps.findIndex((s) => !s.done);
-
   return (
     <aside className="panel panel-right">
       <div className="panel-body">
-        <h3>流程</h3>
-        <ol className="stepper">
-          {steps.map((s, i) => (
-            <li key={s.label} className={s.done ? 'done' : i === currentIdx ? 'current' : ''}>{s.label}</li>
-          ))}
-        </ol>
 
         {movingId && (
           <section className="card">
@@ -46,10 +30,10 @@ export default function RightPanel() {
 
         {!movingId && tool === 'place' && material && (
           <section className="card">
-            <h4>放置中：{material === 'car' ? '測試小車' : PIECES[material].label}</h4>
+            <h4>放置中：{PIECES[material].label}</h4>
             <p>點選工地位置放置。放在積木上方即為堆疊。</p>
             <div className="btn-row">
-              {material !== 'car' && <button className="btn btn-ghost" onClick={rotateGhost}>旋轉 90°</button>}
+              <button className="btn btn-ghost" onClick={rotateGhost}>旋轉 90°</button>
               <button className="btn btn-ghost" onClick={() => pickMaterial(null)}>結束放置</button>
             </div>
           </section>
@@ -98,14 +82,11 @@ function ClientSection() {
   const unlockCar = useStore((s) => s.unlockCar);
   const [code, setCode] = useState('');
   const [open, setOpen] = useState(false);
+  if (game.carUnlocked) return null;
   return (
     <section className="card">
-      <h4>客戶（教師）</h4>
-      <p className="muted small">需求釐清最多 3 次，請小組口頭向客戶提出；系統不記錄問答。</p>
-      {game.carUnlocked ? (
-        <p className="ok">測試小車已授權。可從「庫存」頁放置小車目測尺寸。</p>
-      ) : !open ? (
-        <button className="btn btn-yellow btn-block" onClick={() => setOpen(true)}>向客戶取得測試小車…</button>
+      {!open ? (
+        <button className="btn btn-yellow btn-block" onClick={() => setOpen(true)}>輸入客戶授權碼…</button>
       ) : (
         <div className="auth">
           <label className="field">

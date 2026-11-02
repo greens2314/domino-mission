@@ -36,11 +36,10 @@ kbd { background: #e9e2d0; border: 1px solid #c9b995; border-radius: 4px; paddin
   height: 100vh;
   display: grid;
   grid-template-columns: 320px 1fr 280px;
-  grid-template-rows: 72px 1fr 44px;
+  grid-template-rows: 72px 1fr;
   grid-template-areas:
     "top top top"
-    "left stage right"
-    "foot foot foot";
+    "left stage right";
   gap: 8px;
   padding: 8px;
   background: radial-gradient(ellipse at top, #22395e, var(--navy) 70%);
@@ -49,7 +48,6 @@ kbd { background: #e9e2d0; border: 1px solid #c9b995; border-radius: 4px; paddin
 .panel-left { grid-area: left; }
 .stage { grid-area: stage; position: relative; border-radius: 14px; overflow: hidden; border: 6px solid var(--wood); box-shadow: var(--shadow); background: #0f1d33; }
 .panel-right { grid-area: right; }
-.activity { grid-area: foot; }
 
 /* ---------- top bar ---------- */
 .topbar {
@@ -159,14 +157,6 @@ kbd { background: #e9e2d0; border: 1px solid #c9b995; border-radius: 4px; paddin
 .stage-banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(23,42,70,0.9); color: var(--cream); padding: 8px 18px; border-radius: 999px; font-weight: 800; letter-spacing: 1px; pointer-events: none; }
 .scene-label { background: rgba(23,42,70,0.85); color: var(--cream); font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
 .ruler-label { background: #ff5a1f; color: #fff; }
-
-/* ---------- activity ---------- */
-.activity { background: var(--navy-2); border-radius: 12px; display: flex; align-items: center; padding: 0 14px; color: var(--cream); position: relative; overflow: hidden; }
-.activity-log { display: flex; gap: 22px; font-size: 13px; white-space: nowrap; overflow: hidden; }
-.activity-log span { opacity: 0.55; }
-.activity-log span.latest { opacity: 1; font-weight: 700; }
-.activity-log time { color: var(--gold); margin-right: 4px; font-variant-numeric: tabular-nums; }
-.toast { position: absolute; right: 12px; top: 6px; bottom: 6px; display: flex; align-items: center; background: var(--yellow); color: var(--ink); font-weight: 800; padding: 0 14px; border-radius: 8px; box-shadow: var(--shadow); max-width: 60%; }
 
 /* ---------- dialogs ---------- */
 .overlay { position: fixed; inset: 0; background: rgba(10, 20, 40, 0.6); display: flex; align-items: center; justify-content: center; z-index: 50; }

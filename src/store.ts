@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
-  CAR_AUTH_CODE, CAR_LENGTH, CAR_WIDTH, GAME_MINUTES, START_BUDGET, emptyInventory, nextRotation, PIECES,
+  CAR_AUTH_CODE, CAR_LENGTH, GAME_MINUTES, LANE_Y0, START_BUDGET, emptyInventory, nextRotation, PIECES,
 } from './game/catalog';
-import { checkPlacement, footprintCells, inBoard, buildOccupancy, key2, newId, piecesAbove } from './game/board';
+import { checkPlacement, inBoard, newId, piecesAbove } from './game/board';
 import { runAcceptance } from './game/rules';
 import { simulate } from './game/simulate';
 import { buildOrder, piecesFromOrder, type CartItem } from './game/shop';
@@ -11,7 +11,7 @@ import { buildPassingBoard } from './game/fixtures';
 import type { BoardPiece, GameState, PieceKind, Rotation, SimulationResult } from './game/types';
 
 export type Tool = 'select' | 'place' | 'ruler';
-export type Material = PieceKind | 'car';
+export type Material = PieceKind;
 
 export type Playback = {
   mode: 'rehearsal' | 'acceptance';
@@ -66,6 +66,7 @@ export type Store = {
   rotateSelected: () => void;
   removeSelected: () => void;
   restandSelected: () => void;
+  placeCarAtStart: () => void;
   removeCar: () => void;
   addRulerPoint: (p: Point) => void;
   clearRuler: () => void;
@@ -220,28 +221,10 @@ export const useStore = create<Store>()(
 
         if (s.tool !== 'place' || !s.material) return;
 
-        if (s.material === 'car') {
-          if (!g.carUnlocked) return;
-          const cells: Point[] = [];
-          for (let i = 0; i < CAR_LENGTH; i++) for (let j = 0; j < CAR_WIDTH; j++) cells.push({ x: x + i, y: y + j });
-          if (cells.some((c) => !inBoard(c.x, c.y))) { s.flash('超出施工板範圍'); return; }
-          const occ = buildOccupancy(g.board);
-          if (cells.some((c) => (occ.top.get(key2(c.x, c.y)) ?? 0) > 0)) { s.flash('小車只能停放在空地上。'); return; }
-          set({ game: { ...g, carOnBoard: { x, y } }, material: null, tool: 'select' });
-          return;
-        }
-
         const kind = s.material;
         if ((g.inventory[kind] ?? 0) <= 0) { s.flash(`庫存沒有${PIECES[kind].label}，請先採購。`); return; }
         const r = checkPlacement(g.board, kind, x, y, s.rotation);
         if (!r.ok) { s.flash(r.reason); return; }
-        if (g.carOnBoard) {
-          const carCells = new Set<string>();
-          for (let i = 0; i < CAR_LENGTH; i++) for (let j = 0; j < CAR_WIDTH; j++) carCells.add(key2(g.carOnBoard.x + i, g.carOnBoard.y + j));
-          if (r.z === 0 && footprintCells(kind, x, y, s.rotation).some((c) => carCells.has(key2(c.x, c.y)))) {
-            s.flash('小車停在這裡，請先移開小車。'); return;
-          }
-        }
         const piece: BoardPiece = { id: newId(), kind, x, y, z: r.z, rotation: s.rotation };
         const inv = { ...g.inventory, [kind]: g.inventory[kind] - 1 };
         const remaining = inv[kind];
@@ -303,6 +286,12 @@ export const useStore = create<Store>()(
         const s = get(); const g = s.game;
         if (!isRunning(g) || !s.selectedId) return;
         set({ game: { ...g, board: g.board.map((b) => (b.id === s.selectedId ? { ...b, fallen: false } : b)) } });
+      },
+
+      placeCarAtStart: () => {
+        const g = get().game;
+        if (!isRunning(g) || !g.carUnlocked) return;
+        set({ game: { ...g, carOnBoard: { x: -CAR_LENGTH, y: LANE_Y0 } }, material: null, tool: 'select' });
       },
 
       removeCar: () => {

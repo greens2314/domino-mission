@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store';
-import { fmtClock } from './TopBar';
 
-const EMPTY_LOG: { at: string; text: string }[] = [];
-
+/** Floating notice for operation feedback (invalid placement, budget, etc.). No activity log is shown. */
 export default function ActivityLog() {
-  const log = useStore((s) => s.game?.log) ?? EMPTY_LOG;
   const message = useStore((s) => s.message);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -14,17 +11,6 @@ export default function ActivityLog() {
     const id = setTimeout(() => setVisible(false), 3500);
     return () => clearTimeout(id);
   }, [message]);
-  const recent = log.slice(-3).reverse();
-  return (
-    <footer className="activity">
-      <div className="activity-log">
-        {recent.map((e, i) => (
-          <span key={e.at + i} className={i === 0 ? 'latest' : ''}>
-            <time>{fmtClock(e.at)}</time> {e.text}
-          </span>
-        ))}
-      </div>
-      {message && visible && <div className="toast" role="status">{message.text}</div>}
-    </footer>
-  );
+  if (!message || !visible) return null;
+  return <div className="toast toast-float" role="status">{message.text}</div>;
 }
