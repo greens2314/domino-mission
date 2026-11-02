@@ -491,7 +491,7 @@ function World() {
 
       <OrbitControls
         ref={controls}
-        target={[BOARD_W / 2, 0, BOARD_D / 2]}
+        target={[BOARD_W / 2 - 3, 0, BOARD_D / 2]}
         maxPolarAngle={Math.PI / 2 - 0.08}
         minDistance={12}
         maxDistance={110}
@@ -510,7 +510,7 @@ export default function Scene() {
       shadows
       dpr={[1, 1.5]}
       gl={{ preserveDrawingBuffer: true, antialias: true }}
-      camera={{ position: [BOARD_W / 2, 30, BOARD_D / 2 + 36], fov: 40, near: 0.5, far: 400 }}
+      camera={{ position: [BOARD_W / 2 - 3, 32, BOARD_D / 2 + 40], fov: 40, near: 0.5, far: 400 }}
       onCreated={(state) => registerThree({ gl: state.gl, scene: state.scene, camera: state.camera })}
       onPointerMissed={() => { /* handled by plane */ }}
     >
