@@ -211,3 +211,5 @@ kbd { background: #e9e2d0; border: 1px solid #c9b995; border-radius: 4px; paddin
 
 .restart-btn { align-self: center; padding: 8px 10px; font-size: 13px; white-space: nowrap; border-color: #7f8da8; background: transparent; color: var(--cream); }
 .restart-btn:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+
+.mode-btn:disabled { opacity: 0.45; cursor: not-allowed; }

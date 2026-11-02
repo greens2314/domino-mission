@@ -1,5 +1,5 @@
 import { CAR_HEIGHT, LANE_Y0, LANE_Y1, LANE_YS, dominoDir, isBrick } from './catalog';
-import { buildOccupancy, hkey, key, key2, occupiedCells } from './board';
+import { buildOccupancy, key, key2, occupiedCells } from './board';
 import { simulate } from './simulate';
 import type { BoardPiece, Cell, SimulationResult } from './types';
 
@@ -99,12 +99,18 @@ export function validateGates(board: BoardPiece[]): string | null {
   return null;
 }
 
+/** Brick structures that carry dominoes (stairs, platforms) are not pillars. */
+export function carriesDominoes(board: BoardPiece[], comp: Component): boolean {
+  const occ = buildOccupancy(board);
+  return comp.cells.some((c) => (occ.dominoesAt.get(key(c.x, c.y, c.z + 1)) ?? []).length > 0);
+}
+
 export function detectPillars(board: BoardPiece[]): Component[] {
   const comps = brickComponents(board);
   const gates = detectGates(comps);
   const gateComps = new Set(gates.map((g) => g.component));
   const lastGateX = gates.length ? Math.max(...gates.map((g) => g.maxX)) : -1;
-  return comps.filter((c) => !gateComps.has(c) && c.minX > lastGateX && c.maxZ + 1 >= PILLAR_MIN_HEIGHT);
+  return comps.filter((c) => !gateComps.has(c) && c.minX > lastGateX && c.maxZ + 1 >= PILLAR_MIN_HEIGHT && !carriesDominoes(board, c));
 }
 
 export function validatePillars(board: BoardPiece[]): string | null {
@@ -112,7 +118,7 @@ export function validatePillars(board: BoardPiece[]): string | null {
   const gates = detectGates(comps);
   const gateComps = new Set(gates.map((g) => g.component));
   const lastGateX = gates.length ? Math.max(...gates.map((g) => g.maxX)) : -1;
-  const others = comps.filter((c) => !gateComps.has(c));
+  const others = comps.filter((c) => !gateComps.has(c) && !carriesDominoes(board, c));
   const qualifies = (c: Component) => c.maxZ + 1 >= PILLAR_MIN_HEIGHT && c.minX > lastGateX;
   const ok = others.filter(qualifies);
   if (ok.length >= 2) return null;
@@ -150,43 +156,65 @@ export function validateMaterialUse(board: BoardPiece[]): string | null {
 
 export const DIAMOND_ROWS = [2, 4, 6, 8, 10, 10, 8, 6, 4, 2];
 
+type XY = { x: number; y: number };
+
+function insideQuad(p: XY, quad: XY[], tol: number): boolean {
+  // quad is given counter-clockwise; a point is inside when it is left of (or within tol of) every edge
+  for (let i = 0; i < quad.length; i++) {
+    const a = quad[i], b = quad[(i + 1) % quad.length];
+    const ex = b.x - a.x, ey = b.y - a.y;
+    const len = Math.hypot(ex, ey) || 1;
+    const cross = (ex * (p.y - a.y) - ey * (p.x - a.x)) / len;
+    if (cross < -tol) return false;
+  }
+  return true;
+}
+
 /**
- * Finds a filled 10 x 10 diamond of dominoes (standing or fallen) on the ground.
- * Rows run along x or y; row spacing may be 1.0 or 0.5 cm (dominoes may be packed
- * at half cells along their fall direction); within a row dominoes sit on whole cells.
+ * Finds a filled rhombus ("diamond") of at least 60 ground dominoes.
+ * Dominoes are clustered by proximity; the largest clusters are tested geometrically:
+ * the rhombus inscribed in the cluster's bounding box must hold ≥ 90 % of the tiles
+ * (a square or round blob fails), both diagonals must be ≥ 7 cm,
+ * and ≥ 80 % of the 1 cm cells inside it must contain a tile (filled, not an outline).
  */
 export function findDiamond(board: BoardPiece[]): Set<string> | null {
   const ground = board.filter((p) => p.kind === 'domino' && p.z === 0);
   if (ground.length < 60) return null;
-  const idx = new Map<string, BoardPiece>();
-  for (const p of ground) idx.set(hkey(p.x, p.y), p);
+  const pts = ground.map((p) => ({ id: p.id, x: p.x + 0.5, y: p.y + 0.5 }));
 
-  for (const orient of ['x', 'y'] as const) {
-    const rowOf = (p: BoardPiece) => (orient === 'x' ? p.x : p.y);
-    const spanOf = (p: BoardPiece) => (orient === 'x' ? p.y : p.x);
-    const rowStarts = [...new Set(ground.map(rowOf))].sort((a, b) => a - b);
-    const spanValues = [...new Set(ground.map(spanOf).filter(Number.isInteger))];
-    const centers = new Set<number>();
-    for (const q of spanValues) for (let s = 1; s <= 5; s++) { centers.add(q + s); centers.add(q - s + 1); }
+  // union-find clustering: tiles closer than 1.6 cm belong together
+  const parent = pts.map((_, k) => k);
+  const find = (a: number): number => (parent[a] === a ? a : (parent[a] = find(parent[a])));
+  for (let a = 0; a < pts.length; a++) {
+    for (let b = a + 1; b < pts.length; b++) {
+      if (Math.hypot(pts[a].x - pts[b].x, pts[a].y - pts[b].y) <= 1.6) parent[find(a)] = find(b);
+    }
+  }
+  const clusters = new Map<number, typeof pts>();
+  pts.forEach((p, k) => { const r = find(k); clusters.set(r, [...(clusters.get(r) ?? []), p]); });
 
-    for (const spacing of [1, 0.5]) {
-      for (const r0 of rowStarts) {
-        for (const c of centers) {
-          const ids = new Set<string>();
-          let ok = true;
-          for (let i = 0; i < 10 && ok; i++) {
-            const size = DIAMOND_ROWS[i];
-            const r = r0 + i * spacing;
-            for (let q = c - size / 2; q < c + size / 2; q++) {
-              const d = idx.get(orient === 'x' ? hkey(r, q) : hkey(q, r));
-              if (!d) { ok = false; break; }
-              ids.add(d.id);
-            }
-          }
-          if (ok && ids.size === 60) return ids;
-        }
+  for (const cluster of [...clusters.values()].sort((a, b) => b.length - a.length)) {
+    if (cluster.length < 60) break;
+    // the rhombus inscribed in the cluster's bounding box (vertices at the box's edge midpoints)
+    const minX = Math.min(...cluster.map((p) => p.x)), maxX = Math.max(...cluster.map((p) => p.x));
+    const minY = Math.min(...cluster.map((p) => p.y)), maxY = Math.max(...cluster.map((p) => p.y));
+    if (maxX - minX < 7 || maxY - minY < 7) continue;
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    const left = { x: minX, y: cy }, right = { x: maxX, y: cy }, top = { x: cx, y: maxY }, bottom = { x: cx, y: minY };
+    const quad = [left, bottom, right, top]; // counter-clockwise (x right, y up)
+    const inside = cluster.filter((p) => insideQuad(p, quad, 0.6)).length / cluster.length;
+    if (inside < 0.9) continue;
+    let cells = 0, covered = 0;
+    for (let cx = Math.floor(left.x); cx <= Math.ceil(right.x); cx++) {
+      for (let cy = Math.floor(bottom.y); cy <= Math.ceil(top.y); cy++) {
+        const c = { x: cx + 0.5, y: cy + 0.5 };
+        if (!insideQuad(c, quad, -0.3)) continue;
+        cells++;
+        if (cluster.some((p) => Math.hypot(p.x - c.x, p.y - c.y) <= 0.8)) covered++;
       }
     }
+    if (cells === 0 || covered / cells < 0.8) continue;
+    return new Set(cluster.map((p) => p.id));
   }
   return null;
 }
@@ -217,7 +245,7 @@ export function validateCarRoute(board: BoardPiece[]): RouteCheck {
   if (sim.blocked) return { sim, reason: '小車被車道上的積木阻擋，無法前進。' };
   if (!sim.startDominoId) return { sim, reason: '小車未碰到任何骨牌，連鎖反應沒有開始。' };
   const gates = detectGates(brickComponents(board));
-  const passed = gates.filter((g) => g.maxX < sim.carStopX).length;
+  const passed = gates.filter((g) => g.maxX <= sim.carStopX).length; // the start domino may stand right under the second gate
   if (passed < 2) return { sim, reason: '小車在通過兩座門之前就碰到了骨牌。' };
   return { sim, reason: null };
 }
@@ -255,6 +283,25 @@ export function countReversals(dominoesInOrder: BoardPiece[]): number {
 
 export type ChainCheck = { reason: string | null };
 
+function segmentsCross(a: XY, b: XY, c: XY, d: XY): boolean {
+  const orient = (p: XY, q: XY, r: XY) => Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+  return orient(a, b, c) !== orient(a, b, d) && orient(c, d, a) !== orient(c, d, b);
+}
+
+/** The S path (in fall order) must cross the line between the two pillars. */
+export function pathPassesBetweenPillars(board: BoardPiece[], sPath: BoardPiece[]): boolean {
+  const pillars = detectPillars(board).sort((p, q) => q.maxZ - p.maxZ).slice(0, 2);
+  if (pillars.length < 2) return false;
+  const centre = (c: Component): XY => ({ x: (c.minX + c.maxX + 1) / 2, y: (c.minY + c.maxY + 1) / 2 });
+  const p1 = centre(pillars[0]), p2 = centre(pillars[1]);
+  for (let i = 1; i < sPath.length; i++) {
+    const a = { x: sPath[i - 1].x + 0.5, y: sPath[i - 1].y + 0.5 };
+    const b = { x: sPath[i].x + 0.5, y: sPath[i].y + 0.5 };
+    if (segmentsCross(a, b, p1, p2)) return true;
+  }
+  return false;
+}
+
 /** Dynamic checks that need the simulation: S path, stairs chain, diamond chain, order. */
 export function validateChain(board: BoardPiece[], sim: SimulationResult): string | null {
   const byId = new Map(board.map((p) => [p.id, p] as const));
@@ -276,6 +323,7 @@ export function validateChain(board: BoardPiece[], sim: SimulationResult): strin
   if (sPath.length < 3) return '起始骨牌之後沒有形成 S 型路徑。';
   const bends = chainBends(sPath);
   if (bends.bends < 2 || !bends.left || !bends.right) return 'S 型路徑不成立：骨牌傳遞缺少至少兩次反向彎折。';
+  if (!pathPassesBetweenPillars(board, sPath)) return 'S 型路徑未經過兩根柱子之間。';
 
   if (stairs.some((p) => !fallTime.has(p.id))) return '骨牌階梯未全部倒下：連鎖在階梯中斷。';
 

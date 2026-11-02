@@ -8,7 +8,7 @@ import { runAcceptance } from './game/rules';
 import { simulate } from './game/simulate';
 import { buildOrder, piecesFromOrder, type CartItem } from './game/shop';
 import { buildPassingBoard } from './game/fixtures';
-import type { BoardPiece, GameState, PieceKind, Rotation, SimulationResult } from './game/types';
+import type { BoardPiece, CarPlacement, GameState, PieceKind, Rotation, SimulationResult } from './game/types';
 
 export type Tool = 'select' | 'place' | 'ruler';
 export type Material = PieceKind;
@@ -46,6 +46,9 @@ export type Store = {
   /** the 收回材料 confirmation is shown once per page load */
   removeHintShown: boolean;
   requestRemove: (pieceId: string) => void;
+  /** undo stack of board states (not persisted; cleared by rehearsal/acceptance) */
+  history: { board: BoardPiece[]; inventory: Record<PieceKind, number>; carOnBoard: CarPlacement }[];
+  undo: () => void;
 
   // ---- lifecycle ----
   startGame: (teamName: string) => void;
@@ -90,6 +93,12 @@ export type Store = {
 
 const nowIso = () => new Date().toISOString();
 
+/** Snapshot the board for undo (kept to 50 steps). */
+function remember(s: Store): Store['history'] {
+  const g = s.game!;
+  return [...s.history, { board: g.board, inventory: g.inventory, carOnBoard: g.carOnBoard }].slice(-50);
+}
+
 export function remainingMs(game: GameState, nowMs = Date.now()): number {
   const end = new Date(game.startedAt).getTime() + GAME_MINUTES * 60_000;
   return Math.max(0, end - nowMs);
@@ -123,6 +132,19 @@ export const useStore = create<Store>()(
       playback: null,
       nowMs: Date.now(),
       removeHintShown: false,
+      history: [],
+
+      undo: () => {
+        const s = get(); const g = s.game;
+        if (!isRunning(g) || s.playback || !s.history.length) return;
+        const prev = s.history[s.history.length - 1];
+        set({
+          game: { ...g, board: prev.board, inventory: prev.inventory, carOnBoard: prev.carOnBoard },
+          history: s.history.slice(0, -1),
+          selectedId: null, movingId: null,
+        });
+        s.flash('已復原上一步。');
+      },
 
       requestRemove: (pieceId) => {
         if (get().removeHintShown) { set({ selectedId: pieceId }); get().removeSelected(); return; }
@@ -176,7 +198,7 @@ export const useStore = create<Store>()(
         });
       },
 
-      resetAll: () => set({ game: null, tool: 'select', material: null, rotation: 0, selectedId: null, movingId: null, hover: null, rulerPoints: [], playback: null, modal: null, message: null }),
+      resetAll: () => set({ game: null, tool: 'select', material: null, rotation: 0, selectedId: null, movingId: null, hover: null, rulerPoints: [], playback: null, modal: null, message: null, history: [] }),
 
       loadDemoLayout: (given) => {
         const g = get().game;
@@ -230,7 +252,7 @@ export const useStore = create<Store>()(
           const r = checkPlacement(g.board, p.kind, x, y, s.rotation, p.id, preferZ);
           if (!r.ok) { s.flash(r.reason); return; }
           const board = g.board.map((b) => (b.id === p.id ? { ...b, x, y, z: r.z, rotation: s.rotation, fallen: false } : b));
-          set({ game: { ...g, board }, movingId: null, selectedId: p.id, tool: 'select' });
+          set({ game: { ...g, board }, history: remember(s), movingId: null, selectedId: p.id, tool: 'select' });
           return;
         }
 
@@ -245,6 +267,7 @@ export const useStore = create<Store>()(
         const remaining = inv[kind];
         set({
           game: { ...g, board: [...g.board, piece], inventory: inv },
+          history: remember(s),
           material: remaining > 0 ? kind : null,
           tool: remaining > 0 ? 'place' : 'select',
         });
@@ -273,17 +296,17 @@ export const useStore = create<Store>()(
         if (p.kind === 'domino') {
           const r = checkPlacement(g.board, 'domino', p.x, p.y, rot, p.id);
           if (!r.ok) { s.flash('轉到這個角度會碰到旁邊的骨牌。'); return; }
-          set({ game: { ...g, board: g.board.map((b) => (b.id === p.id ? { ...b, rotation: rot } : b)) } });
+          set({ game: { ...g, board: g.board.map((b) => (b.id === p.id ? { ...b, rotation: rot } : b)) }, history: remember(s) });
           return;
         }
         if (PIECES[p.kind].w === PIECES[p.kind].d) {
-          set({ game: { ...g, board: g.board.map((b) => (b.id === p.id ? { ...b, rotation: rot } : b)) } });
+          set({ game: { ...g, board: g.board.map((b) => (b.id === p.id ? { ...b, rotation: rot } : b)) }, history: remember(s) });
           return;
         }
         if (piecesAbove(g.board, p.id).length) { s.flash('上方還有物件，無法原地旋轉。'); return; }
         const r = checkPlacement(g.board, p.kind, p.x, p.y, rot, p.id);
         if (!r.ok || r.z !== p.z) { s.flash('旋轉後會與其他物件重疊，請先移動。'); return; }
-        set({ game: { ...g, board: g.board.map((b) => (b.id === p.id ? { ...b, rotation: rot } : b)) } });
+        set({ game: { ...g, board: g.board.map((b) => (b.id === p.id ? { ...b, rotation: rot } : b)) }, history: remember(s) });
       },
 
       removeSelected: () => {
@@ -298,6 +321,7 @@ export const useStore = create<Store>()(
             board: g.board.filter((b) => b.id !== p.id),
             inventory: { ...g.inventory, [p.kind]: g.inventory[p.kind] + 1 },
           },
+          history: remember(s),
           selectedId: null,
           modal: null,
           removeHintShown: true,
@@ -307,19 +331,19 @@ export const useStore = create<Store>()(
       restandSelected: () => {
         const s = get(); const g = s.game;
         if (!isRunning(g) || !s.selectedId) return;
-        set({ game: { ...g, board: g.board.map((b) => (b.id === s.selectedId ? { ...b, fallen: false } : b)) } });
+        set({ game: { ...g, board: g.board.map((b) => (b.id === s.selectedId ? { ...b, fallen: false } : b)) }, history: remember(s) });
       },
 
       placeCarAtStart: () => {
         const g = get().game;
         if (!isRunning(g) || !g.carUnlocked) return;
-        set({ game: { ...g, carOnBoard: { x: -CAR_LENGTH, y: LANE_Y0 } }, material: null, tool: 'select' });
+        set({ game: { ...g, carOnBoard: { x: -CAR_LENGTH, y: LANE_Y0 } }, history: remember(get()), material: null, tool: 'select' });
       },
 
       removeCar: () => {
         const g = get().game;
         if (!isRunning(g)) return;
-        set({ game: { ...g, carOnBoard: null } });
+        set({ game: { ...g, carOnBoard: null }, history: remember(get()) });
       },
 
       addRulerPoint: (p) => {
@@ -353,6 +377,7 @@ export const useStore = create<Store>()(
           material: null,
           tool: 'select',
           playback: { mode: 'rehearsal', sim, startedAt: performance.now() },
+          history: [],
         });
         setTimeout(() => get().finishPlayback(), playbackDuration(sim) * 1000 + 100);
       },
@@ -380,6 +405,7 @@ export const useStore = create<Store>()(
           material: null,
           tool: 'select',
           playback: { mode: 'acceptance', sim: result.sim, startedAt: performance.now() },
+          history: [],
         });
         setTimeout(() => get().finishPlayback(), playbackDuration(result.sim) * 1000 + 100);
       },

@@ -458,6 +458,7 @@ function World() {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') return;
       const s = useStore.getState();
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.key === 'r' || e.key === 'R')) { e.preventDefault(); s.undo(); return; }
       const ghostActive = s.movingId || (s.tool === 'place' && s.material);
       if (e.key === 'r' || e.key === 'R') { if (ghostActive) rotateGhost(90); else if (s.selectedId) s.rotateSelected(90); }
       if (e.key === 'q' || e.key === 'Q') { if (ghostActive) rotateGhost(15); else if (s.selectedId) s.rotateSelected(15); }

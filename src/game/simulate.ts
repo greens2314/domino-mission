@@ -1,5 +1,5 @@
 import { CAR_HEIGHT, CAR_LENGTH, BOARD_W, LANE_YS, dominoDir, isBrick } from './catalog';
-import { buildOccupancy, dominoCenter, key, DOMINO_WIDE } from './board';
+import { buildOccupancy, dominoCenter, key } from './board';
 import type { BoardPiece, SimulationResult } from './types';
 
 /**
@@ -48,13 +48,13 @@ export function simulate(board: BoardPiece[]): SimulationResult {
 }
 
 /** How far ahead (cells) a falling domino can reach; its height is 2. */
-export const REACH = 2.0;
+export const REACH = 2.5;
 /** Everything this close ahead is hit together (fan-out through packed arrays). */
-const NEAR = 1.0;
+const NEAR = 1.5;
 /** Lateral half-width of the sweep near the tile (neighbouring rows wobble over) ... */
-const SWEEP_NEAR = DOMINO_WIDE + 0.25;
+const SWEEP_NEAR = 1.3;
 /** ... and further ahead only what is nearly straight in front. */
-const SWEEP_FAR = 0.85;
+const SWEEP_FAR = 1.2;
 
 /**
  * Topple the given dominoes at t = 0 and propagate the chain by geometry:

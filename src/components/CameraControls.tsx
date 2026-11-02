@@ -12,7 +12,8 @@ export default function StageToolbar() {
   const tool = useStore((s) => s.tool);
   const material = useStore((s) => s.material);
   const movingId = useStore((s) => s.movingId);
-  const { setTool, pickMaterial, cancelMove, flash } = useStore.getState();
+  const canUndo = useStore((s) => s.history.length > 0);
+  const { setTool, pickMaterial, cancelMove, flash, undo } = useStore.getState();
 
   const [distance, setDist] = useState(60);
   useEffect(() => onDistanceChange(setDist), []);
@@ -54,6 +55,7 @@ export default function StageToolbar() {
         >
           📏 尺規
         </button>
+        <button type="button" className="mode-btn" disabled={!canUndo} onClick={undo} title="復原上一步（Ctrl+Z 或 Ctrl+R）">↶ 復原</button>
       </div>
 
       <div className="cam">

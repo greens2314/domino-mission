@@ -185,7 +185,8 @@ describe('half-cell dominoes', () => {
     rows.forEach((sz, i) => { for (let y = 14 - sz / 2; y < 14 + sz / 2; y++) b.add('domino', 14.5 + i * 0.5, y, 0, 0); });
     const s = simulate(b.pieces);
     expect(s.falls).toHaveLength(b.pieces.length);
-    expect(findDiamond(b.pieces)?.size).toBe(60);
+    // packed to 4.5 cm wide it is no longer a 10 x 10 rhombus
+    expect(findDiamond(b.pieces)).toBeNull();
   });
 });
 

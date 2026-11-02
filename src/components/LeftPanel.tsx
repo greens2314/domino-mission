@@ -40,10 +40,10 @@ function Brief() {
       <table className="tbl">
         <tbody>
           <tr><th>門</th><td>建造 2 個門；兩門之間距離須至少 10 cm。</td></tr>
-          <tr><th>柱子</th><td>建造 2 根柱子；每根高度至少 6 cm。</td></tr>
-          <tr><th>S 型路徑</th><td>排出可連鎖倒下的 S 型骨牌路徑。</td></tr>
-          <tr><th>骨牌階梯</th><td>建造精確 8 層的骨牌階梯；可中空，不要求實心。</td></tr>
-          <tr><th>鑽石陣</th><td>排出完整、填滿的 10 × 10 菱形骨牌陣。</td></tr>
+          <tr><th>柱子</th><td>門後方建造 2 根柱子；每根高度須大於 6 cm。</td></tr>
+          <tr><th>S 型路徑</th><td>排出可連鎖倒下的 S 型骨牌路徑，過程中要經過兩根柱子。</td></tr>
+          <tr><th>骨牌階梯</th><td>建造精確 8 層的階梯，由低到高，最高層放一張骨牌。</td></tr>
+          <tr><th>鑽石陣</th><td>排 10 × 10 菱形骨牌陣。</td></tr>
           <tr><th>最終效果</th><td>小車通過兩門、碰倒指定起始骨牌；連鎖反應需依序完成 S 路徑、8 層階梯與整個鑽石陣。</td></tr>
         </tbody>
       </table>
@@ -205,7 +205,8 @@ function Tools() {
       <ul>
         <li>點選庫存材料 → 在工地上點選位置放置；放在積木上即為堆疊。</li>
         <li>點選板上物件可選取；拖曳可移動。</li>
-        <li><kbd>R</kbd> 旋轉 90°、<kbd>Delete</kbd> 收回材料、<kbd>Esc</kbd> 取消。</li>
+        <li><kbd>R</kbd> 旋轉 90°、<kbd>Q</kbd>／<kbd>E</kbd> 骨牌微調 15°、<kbd>Delete</kbd> 收回材料、<kbd>Esc</kbd> 取消。</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Z</kbd>（或 <kbd>Ctrl</kbd>+<kbd>R</kbd>）復原上一步；演練後不能復原。</li>
         <li>骨牌的橘色箭頭表示倒下方向。</li>
       </ul>
     </div>
